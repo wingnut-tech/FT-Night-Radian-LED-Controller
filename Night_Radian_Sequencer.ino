@@ -30,6 +30,7 @@ unsigned long prevMillis = 0;
 bool oldButton = HIGH;
 int interval;
 static bool firstrun = true;
+BMP280 bmp;
 
 // Static patterns
 char usflag[] = {'b', 'b', 'b', 'w', 'w', 'w', 'w', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'w', 'w', 'w', 'r', 'r', 'r', 'b', 'b', 'b'};
@@ -67,6 +68,11 @@ DEFINE_GRADIENT_PALETTE( blue ) {
 DEFINE_GRADIENT_PALETTE( blue_black ) {
   0,    0,0,0,
 255,    0,0,255 };
+
+DEFINE_GRADIENT_PALETTE( variometer ) {
+  0,    255,0,0, //Red
+  128,  255,255,255, //White
+255,    0,255,0 }; //Green
 
 void setup() {
   bmp.begin();
@@ -503,6 +509,8 @@ void strobe(int style) {
 void altitude() {
   static int major_alt;
   static int minor_alt;
+  static double prev_alt;
+  CRGBPalette16 palette = variometer;
   double T, P;
   char result = bmp.startMeasurment();
 
@@ -513,7 +521,8 @@ void altitude() {
     if (result != 0) {
       double A = bmp.altitude(P, P0);
 
-      major_alt = map(A, 0, 600, 0, FUSE_LEDS/3);
+      major_alt = floor(A/100);
+      minor_alt = int(A) % 100;
       for (int i=0; i < major_alt; i++) {
         rightleds[i] = CRGB::White;
         rightleds[i+1] = CRGB::White;
@@ -530,10 +539,15 @@ void altitude() {
         leftleds[i+1] = CRGB::Black;
         leftleds[i+2] = CRGB::Black;
       }
-      
+      //map vertical speed value to gradient pallet
+      for (int i; i < TAIL_LEDS; i++) {
+        tailleds[i] = ColorFromPalette(palette, map(A-prev_alt, -10, 10, 0, 240));
+      }
+      prev_alt = A;
     }
   }
-  interval = 500;
+  interval = 250;
+  showStrip();
 }
 
 
@@ -614,4 +628,3 @@ void twinkle1 () {
 //     interval = 20;
 //     showStrip();
 // }
-
