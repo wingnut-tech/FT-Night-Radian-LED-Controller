@@ -550,6 +550,7 @@ void strobe(int style) {
 void altitude() {
   static int majorAlt;
   static int minorAlt;
+  static float avgAlt[3];
   static float prevAlt;
   // double T, P;
   // char result = bmp.startMeasurment();
@@ -561,10 +562,13 @@ void altitude() {
   //   if (result != 0) {
   //     double currentAlt = bmp.altitude(P, P0);
 
-  float currentAlt = bmp.readAltitude(relativeAlt)*3.28084;
+  avgAlt[0]=avgAlt[1];
+  avgAlt[1]=avgAlt[2];
+  avgAlt[2]=bmp.readAltitude(relativeAlt)*3.28084;
+  float currentAlt = (avgAlt[0]+avgAlt[1]+avgAlt[2])/3;
   //using pressure when powered on, gives relative altitude from ground level. Also convert to feet.
 
-  majorAlt = floor(currentAlt/100);
+  majorAlt = floor(currentAlt/100.0);
   minorAlt = int(currentAlt) % 100;
   for (int i=0; i < majorAlt; i++) {
     rightleds[i] = CRGB::White;
