@@ -84,11 +84,11 @@ DEFINE_GRADIENT_PALETTE( variometer ) {
 void setup() {
   bmp.begin(); // initialize the altitude pressure sensor
   // bmp.setOversampling(4);
-  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+  //bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+  //                Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+  //                Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+  //                Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+  //                Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   
   relativeAlt = bmp.readPressure()/100;
 
@@ -552,6 +552,7 @@ void altitude() {
   static int minorAlt;
   static float avgAlt[3];
   static float prevAlt;
+  static CRGBPalette16 varioPalette = variometer;
   // double T, P;
   // char result = bmp.startMeasurment();
 
@@ -588,7 +589,7 @@ void altitude() {
   }
   //map vertical speed value to gradient pallet
   for (int i; i < TAIL_LEDS; i++) {
-    tailleds[i] = ColorFromPalette(variometer, map(currentAlt-prevAlt, -10, 10, 0, 240));
+    tailleds[i] = ColorFromPalette(varioPalette, map(currentAlt-prevAlt, -10, 10, 0, 240));
   }
   prevAlt = currentAlt;
   //   }
