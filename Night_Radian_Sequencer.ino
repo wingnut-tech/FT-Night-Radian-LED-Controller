@@ -2,6 +2,7 @@
 // #include <BMP280.h>
 #include <Adafruit_BMP280.h>
 // #define P0 1021.97
+// define number of LEDs in specific strings
 #define WING_LEDS 31
 #define NON_NAV_LEDS 20
 #define FUSE_LEDS 18
@@ -9,24 +10,30 @@
 #define TAIL_LEDS 5
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
+
+// define the pins that the LED strings are connected to
 #define TAIL_PIN 8
 #define FUSE_PIN 9
 #define NOSE_PIN 10
 #define LEFT_PIN 11
 #define RIGHT_PIN 12
+
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define NUM_SHOWS 9
 #define TMP_BRIGHTNESS 255
 int currentCh1 = 0;  // Receiver Channel PPM value
-int prevCh1 = 0;
+int prevCh1 = 0; // determine if the Receiver signal changed
+
 CRGB rightleds[WING_LEDS];
 CRGB leftleds[WING_LEDS];
 CRGB noseleds[NOSE_LEDS];
 CRGB fuseleds[FUSE_LEDS];
 CRGB tailleds[TAIL_LEDS];
-int currentShow = 0;
-int prevShow = 0;
+
+int currentShow = 0; // which LED show are we currently running
+int prevShow = 0; // did the LED show change
 unsigned long prevMillis = 0;
+
 int interval;
 // BMP280 bmp;
 Adafruit_BMP280 bmp;
@@ -75,7 +82,7 @@ DEFINE_GRADIENT_PALETTE( variometer ) {
 255,    0,255,0 }; //Green
 
 void setup() {
-  bmp.begin();
+  bmp.begin(); // initialize the altitude pressure sensor
   // bmp.setOversampling(4);
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
@@ -100,7 +107,7 @@ void loop() {
   static int currentModeIn = 0;
 
   if (firstrun) {
-    setInitPattern();
+    setInitPattern(); // Set the LED strings to their boot-up configuration
     firstrun = false;
   }
 
@@ -108,7 +115,7 @@ void loop() {
   prevCh1 = currentCh1;
   currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
   //currentCh1 = 1500;
-  if (currentCh1 < 700) {currentCh1 = prevCh1;}
+  if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
   currentModeIn = round(currentCh1/100);
   if (currentModeIn != prevModeIn) {
@@ -136,7 +143,7 @@ void loop() {
   }
 }
 
-void stepShow() {
+void stepShow() { // the main menu of different shows
   switch (currentShow) {
     case 0: blank(); //all off
             break;
@@ -168,7 +175,7 @@ void showStrip () {
   FastLED.show();
 }
 
-void blank() {
+void blank() { // Turn off all LEDs
   for (int i = 0; i < NON_NAV_LEDS; i++) {
     rightleds[i] = CRGB::Black;
     leftleds[i] = CRGB::Black;
@@ -191,7 +198,7 @@ void setColor (CRGBPalette16 palette) {
   showStrip();
 }
 
-CRGB LetterToColor (char letter) {
+CRGB LetterToColor (char letter) { // Convert the letters in the static patterns to color values
   CRGB color;
   switch (letter) {
     case 'r': color = CRGB::Red;
@@ -378,7 +385,7 @@ void colorWave1 (int ledOffset) {
 
 void chase() {
   static int chaseStep = 0;
-  if (prevShow != currentShow) {blank();}
+  if (prevShow != currentShow) {blank();} // blank all LEDs at the start of this show
   
   if (chaseStep > NON_NAV_LEDS) {
     rightleds[NON_NAV_LEDS] = CRGB::Black;
