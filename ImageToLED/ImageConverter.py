@@ -1,9 +1,7 @@
-import PIL
-
 from PIL import Image
 
-image = Image.open('indextest.png').quantize(colors=16, kmeans=3, method=1)
-image.thumbnail((600, 54))
+image = Image.open('image.png').quantize(colors=16, kmeans=3, method=1)
+image.thumbnail((900, 54))
 
 w, h = image.size
 
