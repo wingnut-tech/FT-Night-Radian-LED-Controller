@@ -12,6 +12,7 @@
 #define MAX_BRIGHTNESS 255
 
 // define the pins that the LED strings are connected to
+#define METRIC_PIN 7
 #define TAIL_PIN 8
 #define FUSE_PIN 9
 #define NOSE_PIN 10
@@ -84,6 +85,7 @@ DEFINE_GRADIENT_PALETTE( variometer ) {
 255,    0,255,0 }; //Green
 
 void setup() {
+
   bmp.begin(); // initialize the altitude pressure sensor
   bmp.setOversampling(4);
   double T, P, A, currentAlt;
@@ -93,13 +95,14 @@ void setup() {
     result = bmp.getTemperatureAndPressure(T, P);
     if (result != 0) {
       A = bmp.altitude(P, P0);
-      baseAlt = A * metricConversion;
+      baseAlt = A;
     }
   }
 
   Serial.begin(9600);
   //Serial.println("Starting serial connection");
   pinMode(RC_PIN1, INPUT);
+  pinMode(METRIC_PIN, INPUT_PULLUP);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, FUSE_PIN>(fuseleds, FUSE_LEDS);
@@ -555,17 +558,20 @@ void strobe(int style) {
 }
 
 void altitude() {   // I switched this all back to the original BMP280 code that I was using before.
-                    // I removed the temp measurement, because we aren't using it here.
-                    // Right now majorAlt/minorAlt are returning ASL (above sea level). After initial 
-                    // testing, we will need to run an initial reading during setup to find the base 
-                    // altitude and subtract that from ASL to get AGL (above ground level).
   static int majorAlt;
   static int minorAlt;
   static float avgAlt[3];
   static float prevAlt;
+  static int metric;
   static CRGBPalette16 varioPalette = variometer;
   double T, P, A, currentAlt;
   char result = bmp.startMeasurment();
+
+  if (digitalRead(METRIC_PIN) == HIGH) {
+    metric = 1;
+  } else {
+    metric = metricConversion;  
+  }
 
   if (result != 0) {
     delay(result);
@@ -573,13 +579,13 @@ void altitude() {   // I switched this all back to the original BMP280 code that
     
     if (result != 0) {
       A = bmp.altitude(P, P0);
-      currentAlt = (A * metricConversion) - baseAlt; // subtract baseAlt from currentAlt to get AGL
+      currentAlt = (A - baseAlt) * metric; // subtract baseAlt from currentAlt to get AGL
       if (currentAlt < 0) {currentAlt = 0;}
 
 //  Here I have removed the 3 sample averaging that we were doing. I want to see how it acts first.
 //  avgAlt[0]=avgAlt[1];
 //  avgAlt[1]=avgAlt[2];
-//  avgAlt[2]=bmp.readAltitude(relativeAlt)*metricConversion;
+//  avgAlt[2]=bmp.readAltitude(relativeAlt)*metric;
 //  float currentAlt = (avgAlt[0]+avgAlt[1]+avgAlt[2])/3;
   //using pressure when powered on, gives relative altitude from ground level. Also convert to feet.
 
