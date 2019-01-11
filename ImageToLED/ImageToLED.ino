@@ -1,11 +1,11 @@
-#include "image.h"
 #include <FastLED.h>
+#include "image.h"
 
 #define NUM_LEDS_PER_WING 27
 #define ROWS NUM_LEDS_PER_WING * 2
-#define COLS 400
 #define LEFT_PIN 11
 #define RIGHT_PIN 12
+#define DELAY 50
 
 // CRGB rightleds[NUM_LEDS_PER_WING];
 // CRGB leftleds[NUM_LEDS_PER_WING];
@@ -23,14 +23,23 @@ void setLED(int led, int color) {
   leds[led] = color;
 }
 
+void showStrip () {
+  #ifdef TMP_BRIGHTNESS
+  FastLED.setBrightness(TMP_BRIGHTNESS);
+  #endif
+  FastLED.show();
+}
+
 void loop() {
   for (int x = 0; x < COLS; x++) {
     for (int y = 0; y < ROWS; y += 2) {
-        byte currentByte = pgm_read_byte(&image[(x * ROWS) + y])
+        byte currentByte = pgm_read_byte(&image[(x * ROWS) + y]);
         // leds[y] = colors[currentByte] << 4];
         // leds[y+1] = colors[currentByte] & 0x0F];
-        setLED(y, colors[currentByte] << 4]);
-        setLED(y+1, colors[currentByte] & 0x0F]);
+        setLED(y, colors[currentByte] >> 4);
+        setLED(y+1, colors[currentByte] & 0x0F);
     }
+    showStrip();
+    delay(DELAY);
   }
 }
