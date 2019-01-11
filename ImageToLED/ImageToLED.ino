@@ -29,8 +29,8 @@ void loop() {
         byte currentByte = pgm_read_byte(&image[(x * ROWS) + y])
         // leds[y] = colors[currentByte] << 4];
         // leds[y+1] = colors[currentByte] & 0x0F];
-        setLED(y, colors[currentByte] << 4])
-        setLED(y+1, colors[currentByte] & 0x0F])
+        setLED(y, colors[currentByte] << 4]);
+        setLED(y+1, colors[currentByte] & 0x0F]);
     }
   }
 }
