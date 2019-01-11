@@ -1,7 +1,7 @@
 #include <FastLED.h>
-// #include <BMP280.h>
-#include <Adafruit_BMP280.h>
-// #define P0 1021.97
+ #include <BMP280.h>
+//#include <Adafruit_BMP280.h>
+#define P0 1021.97
 // define number of LEDs in specific strings
 #define WING_LEDS 31
 #define NON_NAV_LEDS 20
@@ -35,8 +35,8 @@ int prevShow = 0; // did the LED show change
 unsigned long prevMillis = 0;
 
 int interval;
-// BMP280 bmp;
-Adafruit_BMP280 bmp;
+BMP280 bmp;
+//Adafruit_BMP280 bmp;
 float relativeAlt;
 
 // Static patterns
@@ -83,16 +83,16 @@ DEFINE_GRADIENT_PALETTE( variometer ) {
 
 void setup() {
   bmp.begin(); // initialize the altitude pressure sensor
-  // bmp.setOversampling(4);
+  bmp.setOversampling(4);
   //bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
   //                Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
   //                Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
   //                Adafruit_BMP280::FILTER_X16,      /* Filtering. */
   //                Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
-  
-  relativeAlt = bmp.readPressure()/100;
+  //
+  //relativeAlt = bmp.readPressure()/100;
 
-  //Serial.begin(9600);
+  Serial.begin(9600);
   pinMode(RC_PIN1, INPUT);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
@@ -120,6 +120,7 @@ void loop() {
   currentModeIn = round(currentCh1/100);
   if (currentModeIn != prevModeIn) {
     currentShow = map(currentModeIn, 9, 19, 0, NUM_SHOWS-1); // mapping 9-19 to get the 900ms - 1900ms value
+    currentShow = 5;
 /*        Serial.write(27);       // ESC command
     Serial.print("[2J");    // clear screen command
     Serial.write(27);
@@ -155,7 +156,7 @@ void stepShow() { // the main menu of different shows
             break;
     case 4: setColor(pure_white);
             break;
-    case 5: chase();
+    case 5: altitude();
             break;
     case 6: strobe(3);
             break;
@@ -547,26 +548,28 @@ void strobe(int style) {
   }
 }
 
-void altitude() {
+void altitude() {   // I switched this all back to the original BMP280 code that I was using before.
+                    // I removed the temp measurement, because we aren't using it here.
+                    // Right now majorAlt/minorAlt are returning ASL (above sea level). After initial 
+                    // testing, we will need to run an initial reading during setup to find the base 
+                    // altitude and subtract that from ASL to get AGL (above ground level).
   static int majorAlt;
   static int minorAlt;
   static float avgAlt[3];
   static float prevAlt;
   static CRGBPalette16 varioPalette = variometer;
-  // double T, P;
-  // char result = bmp.startMeasurment();
+  double P;
+  char result = bmp.startMeasurment();
+  if (result != 0) {
+    delay(result);
+    double currentAlt = bmp.altitude(P, P0);
+    // after initial testing, subtract baseAlt from currentAlt to get AGL
 
-  // if (result != 0) {
-  //   delay(result);
-  //   result = bmp.getTemperatureAndPressure(T, P);
-
-  //   if (result != 0) {
-  //     double currentAlt = bmp.altitude(P, P0);
-
-  avgAlt[0]=avgAlt[1];
-  avgAlt[1]=avgAlt[2];
-  avgAlt[2]=bmp.readAltitude(relativeAlt)*3.28084;
-  float currentAlt = (avgAlt[0]+avgAlt[1]+avgAlt[2])/3;
+//  Here I have removed the 3 sample averaging that we were doing. I want to see how it acts first.
+//  avgAlt[0]=avgAlt[1];
+//  avgAlt[1]=avgAlt[2];
+//  avgAlt[2]=bmp.readAltitude(relativeAlt)*3.28084;
+//  float currentAlt = (avgAlt[0]+avgAlt[1]+avgAlt[2])/3;
   //using pressure when powered on, gives relative altitude from ground level. Also convert to feet.
 
   majorAlt = floor(currentAlt/100.0);
@@ -592,14 +595,21 @@ void altitude() {
     tailleds[i] = ColorFromPalette(varioPalette, map(currentAlt-prevAlt, -10, 10, 0, 240));
   }
   prevAlt = currentAlt;
-  //   }
-  // }
+     }
   interval = 250;
   showStrip();
+    Serial.write(27);       // ESC command
+    Serial.print("[2J");    // clear screen command
+    Serial.write(27);
+    Serial.print("[H");     // cursor to home command
+    Serial.print("Current Altitude: ");
+    Serial.println(majorAlt);
+    Serial.println(minorAlt);
+    Serial.println("------------");
 }
 
 
-//TODO: twinkle() is not gonna work in the current setup.
+//TODO: twinkle() works in the current setup, but not well.
 //      Needs to be re-written to handle all leds together,
 //      versus treating each section (nose, fuse, wings, etc) individually.
 enum {SteadyDim, Dimming, Brightening};
