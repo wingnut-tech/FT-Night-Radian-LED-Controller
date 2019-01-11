@@ -21,6 +21,8 @@
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define NUM_SHOWS 9
 #define TMP_BRIGHTNESS 255
+double metricConversion = 3.28084;
+double baseAlt;
 int currentCh1 = 0;  // Receiver Channel PPM value
 int prevCh1 = 0; // determine if the Receiver signal changed
 
@@ -84,16 +86,19 @@ DEFINE_GRADIENT_PALETTE( variometer ) {
 void setup() {
   bmp.begin(); // initialize the altitude pressure sensor
   bmp.setOversampling(4);
-  //bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-  //                Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-  //                Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-  //                Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-  //                Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
-  //
-  //relativeAlt = bmp.readPressure()/100;
+  double T, P, A, currentAlt;
+  char result = bmp.startMeasurment();
+  if (result != 0) {
+    delay(result);
+    result = bmp.getTemperatureAndPressure(T, P);
+    if (result != 0) {
+      A = bmp.altitude(P, P0);
+      baseAlt = A * metricConversion;
+    }
+  }
 
   Serial.begin(9600);
-  Serial.println("Starting serial connection");
+  //Serial.println("Starting serial connection");
   pinMode(RC_PIN1, INPUT);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
@@ -568,20 +573,18 @@ void altitude() {   // I switched this all back to the original BMP280 code that
     
     if (result != 0) {
       A = bmp.altitude(P, P0);
-      currentAlt = A * 3.28084;
-      Serial.println(A);
-      Serial.println(currentAlt);
-    // after initial testing, subtract baseAlt from currentAlt to get AGL
+      currentAlt = (A * metricConversion) - baseAlt; // subtract baseAlt from currentAlt to get AGL
+      if (currentAlt < 0) {currentAlt = 0;}
 
 //  Here I have removed the 3 sample averaging that we were doing. I want to see how it acts first.
 //  avgAlt[0]=avgAlt[1];
 //  avgAlt[1]=avgAlt[2];
-//  avgAlt[2]=bmp.readAltitude(relativeAlt)*3.28084;
+//  avgAlt[2]=bmp.readAltitude(relativeAlt)*metricConversion;
 //  float currentAlt = (avgAlt[0]+avgAlt[1]+avgAlt[2])/3;
   //using pressure when powered on, gives relative altitude from ground level. Also convert to feet.
 
   majorAlt = floor(currentAlt/100.0);
-  Serial.println(majorAlt);
+  //Serial.println(majorAlt);
   minorAlt = int(currentAlt) % 100;
   for (int i=0; i < majorAlt; i++) {
     rightleds[i] = CRGB::White;
@@ -608,15 +611,19 @@ void altitude() {   // I switched this all back to the original BMP280 code that
  }
   interval = 250;
   showStrip();
-    Serial.write(27);       // ESC command
+  /*  Serial.write(27);       // ESC command
     Serial.print("[2J");    // clear screen command
     Serial.write(27);
     Serial.print("[H");     // cursor to home command
-    Serial.println(A);
+    Serial.print("Base: ");
+    Serial.println(baseAlt);
+    Serial.print("Current: ");
     Serial.println(currentAlt);
+    Serial.print("Major: ");
     Serial.println(majorAlt);
+    Serial.print("Minor: ");
     Serial.println(minorAlt);
-    Serial.println("------------");
+    Serial.println("------------");*/
 }
 
 
