@@ -93,6 +93,7 @@ void setup() {
   //relativeAlt = bmp.readPressure()/100;
 
   Serial.begin(9600);
+  Serial.println("Starting serial connection");
   pinMode(RC_PIN1, INPUT);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
@@ -558,11 +559,18 @@ void altitude() {   // I switched this all back to the original BMP280 code that
   static float avgAlt[3];
   static float prevAlt;
   static CRGBPalette16 varioPalette = variometer;
-  double P;
+  double T, P, A, currentAlt;
   char result = bmp.startMeasurment();
+
   if (result != 0) {
     delay(result);
-    double currentAlt = bmp.altitude(P, P0);
+    result = bmp.getTemperatureAndPressure(T, P);
+    
+    if (result != 0) {
+      A = bmp.altitude(P, P0);
+      currentAlt = A * 3.28084;
+      Serial.println(A);
+      Serial.println(currentAlt);
     // after initial testing, subtract baseAlt from currentAlt to get AGL
 
 //  Here I have removed the 3 sample averaging that we were doing. I want to see how it acts first.
@@ -573,6 +581,7 @@ void altitude() {   // I switched this all back to the original BMP280 code that
   //using pressure when powered on, gives relative altitude from ground level. Also convert to feet.
 
   majorAlt = floor(currentAlt/100.0);
+  Serial.println(majorAlt);
   minorAlt = int(currentAlt) % 100;
   for (int i=0; i < majorAlt; i++) {
     rightleds[i] = CRGB::White;
@@ -595,14 +604,16 @@ void altitude() {   // I switched this all back to the original BMP280 code that
     tailleds[i] = ColorFromPalette(varioPalette, map(currentAlt-prevAlt, -10, 10, 0, 240));
   }
   prevAlt = currentAlt;
-     }
+ }
+ }
   interval = 250;
   showStrip();
     Serial.write(27);       // ESC command
     Serial.print("[2J");    // clear screen command
     Serial.write(27);
     Serial.print("[H");     // cursor to home command
-    Serial.print("Current Altitude: ");
+    Serial.println(A);
+    Serial.println(currentAlt);
     Serial.println(majorAlt);
     Serial.println(minorAlt);
     Serial.println("------------");
