@@ -42,4 +42,9 @@ void loop() {
     showStrip();
     delay(DELAY);
   }
+  for (int i = 0; i < ROWS; i++) {
+    leds[i] = CRGB::Black;
+  }
+  showStrip();
+  delay(1000);
 }
