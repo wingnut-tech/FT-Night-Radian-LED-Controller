@@ -10,9 +10,9 @@
 #define TAIL_LEDS 5
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
+#define TMP_BRIGHTNESS 255
 
 // define the pins that the LED strings are connected to
-#define METRIC_PIN 7
 #define TAIL_PIN 8
 #define FUSE_PIN 9
 #define NOSE_PIN 10
@@ -20,10 +20,12 @@
 #define RIGHT_PIN 12
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
-#define NUM_SHOWS 9
-#define TMP_BRIGHTNESS 255
+#define NUM_SHOWS 8
 double metricConversion = 3.28084;
 double baseAlt;
+double fakeAlt = 0;
+double avgVSpeed[4];
+
 int currentCh1 = 0;  // Receiver Channel PPM value
 int prevCh1 = 0; // determine if the Receiver signal changed
 
@@ -95,14 +97,17 @@ void setup() {
     result = bmp.getTemperatureAndPressure(T, P);
     if (result != 0) {
       A = bmp.altitude(P, P0);
-      baseAlt = A;
+      baseAlt = A * metricConversion;
+      //baseAlt = 0; // temp for testing
     }
+  }
+  for (int i=0; i<4; i++){
+    avgVSpeed[i]=0;
   }
 
   Serial.begin(9600);
   //Serial.println("Starting serial connection");
   pinMode(RC_PIN1, INPUT);
-  pinMode(METRIC_PIN, INPUT_PULLUP);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, FUSE_PIN>(fuseleds, FUSE_LEDS);
@@ -115,6 +120,7 @@ void loop() {
   static int prevModeIn = 0;
   static int currentModeIn = 0;
 
+
   if (firstrun) {
     setInitPattern(); // Set the LED strings to their boot-up configuration
     firstrun = false;
@@ -123,15 +129,19 @@ void loop() {
   // Read in the length of the signal in microseconds
   prevCh1 = currentCh1;
   currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
+  //Serial.print("Channel: ");
+  //Serial.print(currentCh1);
+  //Serial.print("  ");
   //currentCh1 = 1500;
   if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
   currentModeIn = round(currentCh1/100);
   if (currentModeIn != prevModeIn) {
     currentShow = map(currentModeIn, 9, 19, 0, NUM_SHOWS-1); // mapping 9-19 to get the 900ms - 1900ms value
-    currentShow = 5;
-/*        Serial.write(27);       // ESC command
-    Serial.print("[2J");    // clear screen command
+    //currentShow = 5;
+    //fakeAlt = map(currentCh1, 900, 1900, 0, 600);
+    
+/*    Serial.print("[2J");    // clear screen command
     Serial.write(27);
     Serial.print("[H");     // cursor to home command
     Serial.print("Current Mode: ");
@@ -139,8 +149,7 @@ void loop() {
     Serial.print("Channel value: ");
     Serial.println(currentCh1);
     Serial.print("Brightness value: ");
-    Serial.println("------------");
-    //delay(200);*/
+    Serial.println("------------");*/
 
     prevModeIn = currentModeIn;
   }
@@ -159,19 +168,17 @@ void stepShow() { // the main menu of different shows
             break;
     case 1: colorWave1(10);//regular rainbow
             break;
-    case 2: twinkle1();
+    case 2: setColor(blue);
             break;
-    case 3: setColor(blue);
+    case 3: setColor(pure_white);
             break;
-    case 4: setColor(pure_white);
+    case 4: strobe(3); //Realistic double strobe alternating between wings
             break;
-    case 5: altitude();
+    case 5: strobe(2); //Realistic landing-light style alternating between wings
             break;
-    case 6: strobe(3);
+    case 6: strobe(1); // unrealistic rapid strobe of all non-nav leds
             break;
-    case 7: strobe(2);
-            break;
-    case 8: strobe(1);
+    case 7: altitude(fakeAlt); // fakeAlt is for testing. Defaults to zero for live data.
             break;
   }
   prevShow = currentShow;
@@ -557,22 +564,17 @@ void strobe(int style) {
   }
 }
 
-void altitude() {   // I switched this all back to the original BMP280 code that I was using before.
+void altitude(double fake) {
   static int majorAlt;
   static int minorAlt;
-  static float avgAlt[3];
   static float prevAlt;
   static int metric;
+  static int vSpeed;
   static CRGBPalette16 varioPalette = variometer;
   double T, P, A, currentAlt;
   char result = bmp.startMeasurment();
-
-  if (digitalRead(METRIC_PIN) == HIGH) {
-    metric = 1;
-  } else {
-    metric = metricConversion;  
-  }
-
+  metric = metricConversion;  
+ 
   if (result != 0) {
     delay(result);
     result = bmp.getTemperatureAndPressure(T, P);
@@ -581,55 +583,65 @@ void altitude() {   // I switched this all back to the original BMP280 code that
       A = bmp.altitude(P, P0);
       currentAlt = (A - baseAlt) * metric; // subtract baseAlt from currentAlt to get AGL
       if (currentAlt < 0) {currentAlt = 0;}
+      
+      if (fake != 0) {currentAlt = fake;}
 
-//  Here I have removed the 3 sample averaging that we were doing. I want to see how it acts first.
-//  avgAlt[0]=avgAlt[1];
-//  avgAlt[1]=avgAlt[2];
-//  avgAlt[2]=bmp.readAltitude(relativeAlt)*metric;
-//  float currentAlt = (avgAlt[0]+avgAlt[1]+avgAlt[2])/3;
-  //using pressure when powered on, gives relative altitude from ground level. Also convert to feet.
-
-  majorAlt = floor(currentAlt/100.0);
+  majorAlt = floor(currentAlt/100.0)*3;
   //Serial.println(majorAlt);
   minorAlt = int(currentAlt) % 100;
-  for (int i=0; i < majorAlt; i++) {
+  minorAlt = map(minorAlt, 0, 100, 0, NON_NAV_LEDS);
+  
+  for (int i=0; i < minorAlt; i++) {
     rightleds[i] = CRGB::White;
-    rightleds[i+1] = CRGB::White;
-    rightleds[i+2] = CRGB::White;
     leftleds[i] = CRGB::White;
-    leftleds[i+1] = CRGB::White;
-    leftleds[i+2] = CRGB::White;
+  }
+  for (int i=minorAlt+1; i <= FUSE_LEDS; i++) {
+    rightleds[i] = CRGB::Black;
+    leftleds[i] = CRGB::Black;
+  }
+
+  for (int i=0; i < majorAlt; i++) {
+    fuseleds[i-2] = CRGB::White;
+    fuseleds[i-1] = CRGB::White;
+    fuseleds[i] = CRGB::White;
   }
   for (int i=majorAlt+1; i < FUSE_LEDS; i++) {
-    rightleds[i] = CRGB::Black;
-    rightleds[i+1] = CRGB::Black;
-    rightleds[i+2] = CRGB::Black;
-    leftleds[i] = CRGB::Black;
-    leftleds[i+1] = CRGB::Black;
-    leftleds[i+2] = CRGB::Black;
+    fuseleds[i-2] = CRGB::Black;
+    fuseleds[i-1] = CRGB::Black;
+    fuseleds[i] = CRGB::Black;
   }
+
   //map vertical speed value to gradient pallet
+  avgVSpeed[0]=avgVSpeed[1];
+  avgVSpeed[1]=avgVSpeed[2];
+  avgVSpeed[2]=avgVSpeed[3];
+  avgVSpeed[3]=int(currentAlt-prevAlt);
+
+  vSpeed = (avgVSpeed[0]+avgVSpeed[1]+avgVSpeed[2]+avgVSpeed[3])/3;
+  if (vSpeed > 20) {vSpeed = 20;}
+  if (vSpeed < -20) {vSpeed = -20;}
   for (int i; i < TAIL_LEDS; i++) {
-    tailleds[i] = ColorFromPalette(varioPalette, map(currentAlt-prevAlt, -10, 10, 0, 240));
+    tailleds[i] = ColorFromPalette(varioPalette, map(vSpeed, -20, 20, 0, 240));
   }
   prevAlt = currentAlt;
  }
  }
-  interval = 250;
+  interval = 100;
   showStrip();
-  /*  Serial.write(27);       // ESC command
-    Serial.print("[2J");    // clear screen command
-    Serial.write(27);
-    Serial.print("[H");     // cursor to home command
+    //Serial.write(27);       // ESC command
+    //Serial.print("[2J");    // clear screen command
+    //Serial.write(27);
+    //Serial.print("[H");     // cursor to home command
     Serial.print("Base: ");
-    Serial.println(baseAlt);
-    Serial.print("Current: ");
-    Serial.println(currentAlt);
-    Serial.print("Major: ");
-    Serial.println(majorAlt);
-    Serial.print("Minor: ");
-    Serial.println(minorAlt);
-    Serial.println("------------");*/
+    Serial.print(baseAlt);
+    Serial.print("  Current: ");
+    Serial.print(currentAlt);
+    Serial.print("  Major: ");
+    Serial.print(majorAlt);
+    Serial.print("  Minor: ");
+    Serial.print(minorAlt);
+    Serial.print("vert speed: ");
+    Serial.println(vSpeed);
 }
 
 
