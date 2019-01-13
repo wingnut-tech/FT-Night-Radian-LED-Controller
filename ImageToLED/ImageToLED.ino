@@ -1,13 +1,13 @@
 #include <FastLED.h>
 #include "image.h"
 
-// #define NUM_LEDS_PER_WING 28
-#define NUM_LEDS_PER_WING 3
+#define NUM_LEDS_PER_WING 28
+// #define NUM_LEDS_PER_WING 3
 #define ROWS NUM_LEDS_PER_WING * 2
 #define LEFT_PIN 11
-// #define RIGHT_PIN 12
-#define RIGHT_PIN 6
-#define DELAY 100
+#define RIGHT_PIN 12
+// #define RIGHT_PIN 6
+#define DELAY 50
 
 #define TMP_BRIGHTNESS 32
 
@@ -15,8 +15,8 @@ CRGB leds[ROWS];
 
 
 void setup() {
-  FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(leds, 0, NUM_LEDS_PER_WING);
-  FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leds, NUM_LEDS_PER_WING, NUM_LEDS_PER_WING);
+  FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leds, 0, NUM_LEDS_PER_WING);
+  FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(leds, NUM_LEDS_PER_WING, NUM_LEDS_PER_WING);
 }
 
 void setLED(int led, CRGB color) {
@@ -52,6 +52,6 @@ void loop() {
     leds[i] = CRGB::Black;
   }
   showStrip();
-  Serial.println();
+  // Serial.println();
   delay(3000);
 }
