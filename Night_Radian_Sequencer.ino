@@ -7,10 +7,13 @@
 #define NON_NAV_LEDS 20
 #define FUSE_LEDS 18
 #define NOSE_LEDS 4
-#define TAIL_LEDS 5
+#define TAIL_LEDS 8
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
-#define TMP_BRIGHTNESS 255
+#define TMP_BRIGHTNESS 55
+#define VSPEED_MAP 2
+#define MAX_ALTIMETER 400
+#define WINGTIP_STROBE_LOC 27
 
 // define the pins that the LED strings are connected to
 #define TAIL_PIN 8
@@ -24,7 +27,7 @@
 double metricConversion = 3.28084;
 double baseAlt;
 double fakeAlt = 0;
-double avgVSpeed[4];
+double avgVSpeed[] = {0,0,0,0};
 
 int currentCh1 = 0;  // Receiver Channel PPM value
 int prevCh1 = 0; // determine if the Receiver signal changed
@@ -34,14 +37,17 @@ CRGB leftleds[WING_LEDS];
 CRGB noseleds[NOSE_LEDS];
 CRGB fuseleds[FUSE_LEDS];
 CRGB tailleds[TAIL_LEDS];
+CRGB templeft[1];
+CRGB tempright[1];
 
 int currentShow = 0; // which LED show are we currently running
 int prevShow = 0; // did the LED show change
+int wingtipStrobeCount = 0;
 unsigned long prevMillis = 0;
+unsigned long prevStrobeMillis = 0;
 
 int interval;
 BMP280 bmp;
-//Adafruit_BMP280 bmp;
 float relativeAlt;
 
 // Static patterns
@@ -52,7 +58,7 @@ char init_leftwing[] = {'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', '
 char leftwing[] = {'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r'};
 char init_nose[] = {'b', 'b', 'b', 'b'};
 char init_fuse[] = {'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b'};
-char init_tail[] = {'b', 'b', 'b', 'b', 'b'};
+char init_tail[] = {'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b'};
 char christmas[] = {'r', 'r', 'r', 'g', 'g', 'g', 'g', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'g', 'g', 'g', 'r', 'r', 'r', 'g', 'g', 'g'};
 
 // Gradients
@@ -87,6 +93,7 @@ DEFINE_GRADIENT_PALETTE( variometer ) {
 255,    0,255,0 }; //Green
 
 void setup() {
+  Serial.begin(115200);
 
   bmp.begin(); // initialize the altitude pressure sensor
   bmp.setOversampling(4);
@@ -98,15 +105,11 @@ void setup() {
     if (result != 0) {
       A = bmp.altitude(P, P0);
       baseAlt = A * metricConversion;
-      //baseAlt = 0; // temp for testing
+      //baseAlt = 0; // shows ASL for testing, instead of AGL
+      //Serial.println(baseAlt);
     }
   }
-  for (int i=0; i<4; i++){
-    avgVSpeed[i]=0;
-  }
 
-  Serial.begin(9600);
-  //Serial.println("Starting serial connection");
   pinMode(RC_PIN1, INPUT);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
@@ -119,12 +122,61 @@ void loop() {
   static bool firstrun = true;
   static int prevModeIn = 0;
   static int currentModeIn = 0;
-
+  static int wingtipStrobeDelay = 50;
+  static bool wingtipStrobeState = false;
 
   if (firstrun) {
     setInitPattern(); // Set the LED strings to their boot-up configuration
     firstrun = false;
   }
+  
+  // uncomment for wingtip strobes. Still a work in progress.
+/*  unsigned long currentStrobeMillis = millis();
+  if (currentStrobeMillis - prevStrobeMillis > wingtipStrobeDelay) {
+    prevStrobeMillis = currentStrobeMillis;
+    /*Serial.print(" s:");
+    Serial.print(wingtipStrobeState);
+    Serial.print(" c:");
+    Serial.print(wingtipStrobeCount);
+    switch (wingtipStrobeCount) {
+      case 0: if (wingtipStrobeState == false) {
+                templeft[1] = leftleds[WINGTIP_STROBE_LOC];
+                leftleds[WINGTIP_STROBE_LOC] = CRGB::White;
+                tempright[1] = rightleds[WINGTIP_STROBE_LOC];
+                rightleds[WINGTIP_STROBE_LOC] = CRGB::White;
+                wingtipStrobeState = true;
+                wingtipStrobeDelay = 50;
+                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
+              } else {
+                leftleds[WINGTIP_STROBE_LOC] = templeft[1];
+                rightleds[WINGTIP_STROBE_LOC] = tempright[1];
+                wingtipStrobeState = false;
+                wingtipStrobeDelay = 50;
+                wingtipStrobeCount++;
+                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
+              }
+              break;
+      case 1: if (wingtipStrobeState == false) {
+                templeft[1] = leftleds[WINGTIP_STROBE_LOC];
+                leftleds[WINGTIP_STROBE_LOC] = CRGB::White;
+                tempright[1] = rightleds[WINGTIP_STROBE_LOC];
+                rightleds[WINGTIP_STROBE_LOC] = CRGB::White;
+                wingtipStrobeState = true;
+                wingtipStrobeDelay = 50;
+                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
+              } else {
+                leftleds[WINGTIP_STROBE_LOC] = templeft[1];
+                rightleds[WINGTIP_STROBE_LOC] = tempright[1];
+                wingtipStrobeState = false;
+                wingtipStrobeDelay = 500;
+                wingtipStrobeCount++;
+                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
+              }
+              break;
+    }
+    showStrip();
+  }
+*/
 
   // Read in the length of the signal in microseconds
   prevCh1 = currentCh1;
@@ -135,13 +187,14 @@ void loop() {
   //currentCh1 = 1500;
   if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
-  currentModeIn = round(currentCh1/100);
+  currentModeIn = floor(currentCh1/100);
   if (currentModeIn != prevModeIn) {
     currentShow = map(currentModeIn, 9, 19, 0, NUM_SHOWS-1); // mapping 9-19 to get the 900ms - 1900ms value
-    //currentShow = 5;
-    //fakeAlt = map(currentCh1, 900, 1900, 0, 600);
+    //currentShow = 7;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
+    //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
     
-/*    Serial.print("[2J");    // clear screen command
+    /*Serial.write(27);
+    Serial.print("[2J");    // clear screen command
     Serial.write(27);
     Serial.print("[H");     // cursor to home command
     Serial.print("Current Mode: ");
@@ -238,23 +291,6 @@ CRGB LetterToColor (char letter) { // Convert the letters in the static patterns
 //      If it does, we can nuke all of this redundant commented code.
 void setPattern (char pattern[]) {
   for (int i = 0; i < NON_NAV_LEDS; i++) {
-    // CRGB newColor;
-    // switch (pattern[i]) {
-    //   case 'r': newColor = CRGB::Red;
-    //             break;
-    //   case 'g': newColor = CRGB::Green;
-    //             break;
-    //   case 'b': newColor = CRGB::Blue;
-    //             break;
-    //   case 'w': newColor = CRGB::White;
-    //             break;
-    //   case 'a': newColor = CRGB::AntiqueWhite;
-    //             break;
-    //   case 'o': newColor = CRGB::Black;
-    //             break;
-    // }
-    // rightleds[i] = newColor;
-    // leftleds[i] = newColor;
     rightleds[i] = LetterToColor(pattern[i]);
     leftleds[i] = LetterToColor(pattern[i]);
   }
@@ -265,102 +301,22 @@ void setPattern (char pattern[]) {
 void setInitPattern () {
 
   for (int i = 0; i < WING_LEDS; i++) {
-    // CRGB newColor;
-    // switch (init_rightwing[i]) {
-    //   case 'r': newColor = CRGB::Red;
-    //             break;
-    //   case 'g': newColor = CRGB::Green;
-    //             break;
-    //   case 'b': newColor = CRGB::Blue;
-    //             break;
-    //   case 'w': newColor = CRGB::White;
-    //             break;
-    //   case 'a': newColor = CRGB::AntiqueWhite;
-    //             break;
-    //   case 'o': newColor = CRGB::Black;
-    //             break;
-    // }
-    // rightleds[i] = newColor;
     rightleds[i] = LetterToColor(init_rightwing[i]);
   }
   
   for (int i = 0; i < WING_LEDS; i++) {
-    // CRGB newColor;
-    // switch (init_leftwing[i]) {
-    //   case 'r': newColor = CRGB::Red;
-    //             break;
-    //   case 'g': newColor = CRGB::Green;
-    //             break;
-    //   case 'b': newColor = CRGB::Blue;
-    //             break;
-    //   case 'w': newColor = CRGB::White;
-    //             break;
-    //   case 'a': newColor = CRGB::AntiqueWhite;
-    //             break;
-    //   case 'o': newColor = CRGB::Black;
-    //             break;
-    // }
-    // leftleds[i] = newColor;
     leftleds[i] = LetterToColor(init_leftwing[i]);
   }
   
   for (int i = 0; i < NOSE_LEDS; i++) {
-    // CRGB newColor;
-    // switch (init_nose[i]) {
-    //   case 'r': newColor = CRGB::Red;
-    //             break;
-    //   case 'g': newColor = CRGB::Green;
-    //             break;
-    //   case 'b': newColor = CRGB::Blue;
-    //             break;
-    //   case 'w': newColor = CRGB::White;
-    //             break;
-    //   case 'a': newColor = CRGB::AntiqueWhite;
-    //             break;
-    //   case 'o': newColor = CRGB::Black;
-    //             break;
-    // }
-    // noseleds[i] = newColor;
     noseleds[i] = LetterToColor(init_nose[i]);
   }
   
   for (int i = 0; i < FUSE_LEDS; i++) {
-    // CRGB newColor;
-    // switch (init_fuse[i]) {
-    //   case 'r': newColor = CRGB::Red;
-    //             break;
-    //   case 'g': newColor = CRGB::Green;
-    //             break;
-    //   case 'b': newColor = CRGB::Blue;
-    //             break;
-    //   case 'w': newColor = CRGB::White;
-    //             break;
-    //   case 'a': newColor = CRGB::AntiqueWhite;
-    //             break;
-    //   case 'o': newColor = CRGB::Black;
-    //             break;
-    // }
-    // fuseleds[i] = newColor;
     fuseleds[i] = LetterToColor(init_fuse[i]);
   }
   
   for (int i = 0; i < TAIL_LEDS; i++) {
-    // CRGB newColor;
-    // switch (init_tail[i]) {
-    //   case 'r': newColor = CRGB::Red;
-    //             break;
-    //   case 'g': newColor = CRGB::Green;
-    //             break;
-    //   case 'b': newColor = CRGB::Blue;
-    //             break;
-    //   case 'w': newColor = CRGB::White;
-    //             break;
-    //   case 'a': newColor = CRGB::AntiqueWhite;
-    //             break;
-    //   case 'o': newColor = CRGB::Black;
-    //             break;
-    // }
-    // tailleds[i] = newColor;
     tailleds[i] = LetterToColor(init_tail[i]);
   }
   
@@ -483,10 +439,6 @@ void strobe(int style) {
 
     case 3: //alternate double-blink strobing of left and right wing
       static int strobeStep = 0;
-      // CRGB noseColor = CRGB::Blue;
-      // CRGB fuseColor = CRGB::Blue;
-      // CRGB tailColor = CRGB::Blue;
-      //Not sure what these were ^ ?
 
       switch(strobeStep) {
 
@@ -586,7 +538,7 @@ void altitude(double fake) {
       
       if (fake != 0) {currentAlt = fake;}
 
-  majorAlt = floor(currentAlt/100.0)*3;
+/*  majorAlt = floor(currentAlt/100.0)*3;
   //Serial.println(majorAlt);
   minorAlt = int(currentAlt) % 100;
   minorAlt = map(minorAlt, 0, 100, 0, NON_NAV_LEDS);
@@ -609,19 +561,37 @@ void altitude(double fake) {
     fuseleds[i-2] = CRGB::Black;
     fuseleds[i-1] = CRGB::Black;
     fuseleds[i] = CRGB::Black;
+  }*/
+
+  //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
+  if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
+  
+  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i++) {
+    rightleds[i] = CRGB::White;
+    leftleds[i] = CRGB::White;
   }
+  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i < NON_NAV_LEDS; i++) {
+    rightleds[i] = CRGB::Black;
+    leftleds[i] = CRGB::Black;
+  }
+  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
+    fuseleds[i] = CRGB::White;
+  }
+  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
+    fuseleds[i] = CRGB::Black;
+  }
+  
 
   //map vertical speed value to gradient pallet
   avgVSpeed[0]=avgVSpeed[1];
   avgVSpeed[1]=avgVSpeed[2];
-  avgVSpeed[2]=avgVSpeed[3];
-  avgVSpeed[3]=int(currentAlt-prevAlt);
+  avgVSpeed[2]=int(currentAlt-prevAlt);
 
-  vSpeed = (avgVSpeed[0]+avgVSpeed[1]+avgVSpeed[2]+avgVSpeed[3])/3;
-  if (vSpeed > 20) {vSpeed = 20;}
-  if (vSpeed < -20) {vSpeed = -20;}
+  vSpeed = (avgVSpeed[0]+avgVSpeed[1]+avgVSpeed[2])/3;
+  if (vSpeed > VSPEED_MAP) {vSpeed = VSPEED_MAP;}
+  if (vSpeed < (VSPEED_MAP*-1)) {vSpeed = (VSPEED_MAP*-1);}
   for (int i; i < TAIL_LEDS; i++) {
-    tailleds[i] = ColorFromPalette(varioPalette, map(vSpeed, -20, 20, 0, 240));
+    tailleds[i] = ColorFromPalette(varioPalette, map(vSpeed, (VSPEED_MAP*-1), VSPEED_MAP, 0, 240));
   }
   prevAlt = currentAlt;
  }
@@ -632,7 +602,7 @@ void altitude(double fake) {
     //Serial.print("[2J");    // clear screen command
     //Serial.write(27);
     //Serial.print("[H");     // cursor to home command
-    Serial.print("Base: ");
+    /*Serial.print("Base: ");
     Serial.print(baseAlt);
     Serial.print("  Current: ");
     Serial.print(currentAlt);
@@ -640,8 +610,8 @@ void altitude(double fake) {
     Serial.print(majorAlt);
     Serial.print("  Minor: ");
     Serial.print(minorAlt);
-    Serial.print("vert speed: ");
-    Serial.println(vSpeed);
+    Serial.print("  vert speed: ");
+    Serial.println(vSpeed);*/
 }
 
 
