@@ -7,12 +7,15 @@
 #define LEFT_PIN 11
 #define RIGHT_PIN 12
 // #define RIGHT_PIN 6
+#define RC_PIN1 5
 #define ON_TIME 10
 #define OFF_TIME 15
 
 #define TMP_BRIGHTNESS 32
 
 unsigned long prevMillis = 0;
+
+int totalPixels = sizeof(image);
 
 CRGB leds[ROWS];
 
@@ -47,22 +50,29 @@ void blackout() {
 }
 
 void setup() {
+  pinMode(RC_PIN1, INPUT);
   // Adding both outputs to the same leds[] array
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leds, 0, NUM_LEDS_PER_WING); // From 0-(one wing)
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(leds, NUM_LEDS_PER_WING, NUM_LEDS_PER_WING); // from (one wing)-end
 }
 
 void loop() {
+  int direction = (pulseIn(RC_PIN1, HIGH, 25000) < 1500) ? 0 : 1;
   int count = 0;
+  byte currentByte;
   for (int x = 0; x < COLS; x++) {
     for (int y = 0; y < ROWS; y++) {
-        byte currentByte = pgm_read_byte(&image[count]); // count is only updated every other time, because we use one byte for two pixels
-        if (y % 2 == 0) {
-          setLED(y, colors[currentByte >> 4]); // first led gets the first half of the byte ( 0x(F)F ), shifted over
-        } else {
-          setLED(y, colors[currentByte & 0x0F]); // second led gets the second half of the byte ( 0xF(F) ) with the first half removed
-          count++;
-        }
+      if (direction == 0) {
+        currentByte = pgm_read_byte(&image[count]); // count is only updated every other time, because we use one byte for two pixels
+      } else {
+        currentByte = pgm_read_byte(&image[totalPixels - count]); // read the image[] array "backwards" to flip the image. Maybe?
+      }
+      if (y % 2 == 0) {
+        setLED(y, colors[currentByte >> 4]); // first led gets the first half of the byte ( 0x(F)F ), shifted over
+      } else {
+        setLED(y, colors[currentByte & 0x0F]); // second led gets the second half of the byte ( 0xF(F) ) with the first half removed
+        count++;
+      }
     }
     myDelay(OFF_TIME);  // Delay the remainder of the "off time" between columns
     showStrip();        // Show the new "on" values that were queued
