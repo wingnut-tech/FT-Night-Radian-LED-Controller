@@ -15,7 +15,7 @@
 
 unsigned long prevMillis = 0;
 
-int totalPixels = sizeof(image);
+int totalPixels = sizeof(image) - 1;
 
 CRGB leds[ROWS];
 
