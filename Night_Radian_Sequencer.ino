@@ -14,6 +14,9 @@
 #define VSPEED_MAP 2
 #define MAX_ALTIMETER 400
 #define WINGTIP_STROBE_LOC 27
+#define PROGRAM_CYCLE_BTN 7
+#define PROGRAM_ENABLE_BTN 6
+#define PROGRAM_PARAM_BTN 4
 
 // define the pins that the LED strings are connected to
 #define TAIL_PIN 8
@@ -44,6 +47,7 @@ int currentShow = 0; // which LED show are we currently running
 int prevShow = 0; // did the LED show change
 int wingtipStrobeCount = 0;
 unsigned long prevMillis = 0;
+unsigned long progMillis = 0;
 unsigned long prevStrobeMillis = 0;
 
 int interval;
@@ -109,7 +113,9 @@ void setup() {
       //Serial.println(baseAlt);
     }
   }
-
+  pinMode(PROGRAM_CYCLE_BTN, INPUT);
+  pinMode(PROGRAM_ENABLE_BTN, INPUT);
+  pinMode(PROGRAM_PARAM_BTN, INPUT);
   pinMode(RC_PIN1, INPUT);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
@@ -124,6 +130,10 @@ void loop() {
   static int currentModeIn = 0;
   static int wingtipStrobeDelay = 50;
   static bool wingtipStrobeState = false;
+  static bool programMode = false;
+  static int programModeCounter = 0;
+  static int programButtonPressed = 0;
+  static unsigned long currentMillis = millis();
 
   if (firstrun) {
     setInitPattern(); // Set the LED strings to their boot-up configuration
@@ -177,13 +187,28 @@ void loop() {
     showStrip();
   }
 */
+  if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
+    /*  On first run of program mode, read values stored in eeprom into variable array. Then loop through the programs, indicating
+     *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command.
 
+    */
+  
+  // Are we exiting program mode?
+  if (digitalRead(PROGRAM_CYCLE_BTN) == HIGH) { // Is the Program button pressed?
+    programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+    if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
+      programMode == false;
+      // store current program values into eeprom
+      programInit(); //strobe the leds to indicate leaving program mode
+    }
+    progMillis = currentMillis;
+  }
+  
+  } else { // we are not in program mode. Read signal from receiver and run through programs normally.
+    
   // Read in the length of the signal in microseconds
   prevCh1 = currentCh1;
   currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
-  //Serial.print("Channel: ");
-  //Serial.print(currentCh1);
-  //Serial.print("  ");
   //currentCh1 = 1500;
   if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
@@ -193,25 +218,24 @@ void loop() {
     //currentShow = 7;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
     //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
     
-    /*Serial.write(27);
-    Serial.print("[2J");    // clear screen command
-    Serial.write(27);
-    Serial.print("[H");     // cursor to home command
-    Serial.print("Current Mode: ");
-    Serial.println(currentShow);
-    Serial.print("Channel value: ");
-    Serial.println(currentCh1);
-    Serial.print("Brightness value: ");
-    Serial.println("------------");*/
-
     prevModeIn = currentModeIn;
+  }
   }
 
   // The timing control for calling each "frame" of the different animations
-  unsigned long currentMillis = millis();
+  currentMillis = millis();
   if (currentMillis - prevMillis > interval) {
     prevMillis = currentMillis;
     stepShow();
+  }
+  // Are we entering program mode?
+  if (digitalRead(PROGRAM_CYCLE_BTN) == HIGH) { // Is the Program button pressed?
+    programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+    if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
+      programMode == true;
+      programInit(); //strobe the leds to indicate entering program mode
+    }
+    progMillis = currentMillis;
   }
 }
 
@@ -676,4 +700,31 @@ void twinkle1 () {
   }
   interval = 10;
   showStrip();
+}
+
+void programInit() {
+  static bool StrobeState = true;
+  for (int j = 0; j <= 10; j++) {
+      if (StrobeState) {
+        for (int i = 0; i < NON_NAV_LEDS; i++) {
+          rightleds[i] = CRGB::White;
+          leftleds[i] = CRGB::White;
+        }
+        for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = CRGB::White;}
+        for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::White;}
+        for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::White;}
+        StrobeState = false;
+      } else {
+        for (int i = 0; i < NON_NAV_LEDS; i++) {
+          rightleds[i] = CRGB::Black;
+          leftleds[i] = CRGB::Black;
+        }
+        for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = CRGB::Black;}
+        for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::Black;}
+        for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::Black;}
+        StrobeState = true;
+        }
+      delay(50);
+      showStrip();
+  }
 }
