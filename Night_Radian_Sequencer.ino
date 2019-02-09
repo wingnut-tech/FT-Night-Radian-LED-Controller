@@ -189,9 +189,11 @@ void loop() {
 */
   if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
     /*  On first run of program mode, read values stored in eeprom into variable array. Then loop through the programs, indicating
-     *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command.
+     *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command. */
 
-    */
+    //if PROGRAM_CYCLE_BTN is low, then high, then low, all within 1 second, then we are cycling through the shows, 
+    //so currentShow++; if (currentShow > NUM_SHOWS) {currentShow = 0;}
+    
   
   // Are we exiting program mode?
   if (digitalRead(PROGRAM_CYCLE_BTN) == HIGH) { // Is the Program button pressed?
@@ -203,7 +205,17 @@ void loop() {
     }
     progMillis = currentMillis;
   }
-  
+
+
+  // The timing control for calling each "frame" of the different animations
+  currentMillis = millis();
+  if (currentMillis - prevMillis > interval) {
+    prevMillis = currentMillis;
+    // place this statement inside the loop for enabling/disabling a show
+    //showState(); // indicate whether the current show is enabled or disabled
+    stepShow();
+  }
+
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
     
   // Read in the length of the signal in microseconds
