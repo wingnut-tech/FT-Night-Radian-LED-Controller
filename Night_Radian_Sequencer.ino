@@ -27,7 +27,7 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define NUM_SHOWS 8
-double metricConversion = 3.28084;
+double metricConversion = 3.3;
 double baseAlt;
 double fakeAlt = 0;
 double avgVSpeed[] = {0,0,0,0};
@@ -97,6 +97,8 @@ DEFINE_GRADIENT_PALETTE( variometer ) {
 255,    0,255,0 }; //Green
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
   Serial.begin(115200);
 
   bmp.begin(); // initialize the altitude pressure sensor
@@ -110,8 +112,13 @@ void setup() {
       A = bmp.altitude(P, P0);
       baseAlt = A * metricConversion;
       //baseAlt = 0; // shows ASL for testing, instead of AGL
+      //Serial.print("Base Alt: ");
       //Serial.println(baseAlt);
+    } else {
+      Serial.println("No T&P");
     }
+  } else {
+    Serial.println("No startMeasurement");
   }
   pinMode(PROGRAM_CYCLE_BTN, INPUT);
   pinMode(PROGRAM_ENABLE_BTN, INPUT);
@@ -200,6 +207,7 @@ void loop() {
     programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
     if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
       programMode == false;
+      Serial.println("Exiting program mode");
       // store current program values into eeprom
       programInit(); //strobe the leds to indicate leaving program mode
     }
@@ -221,7 +229,7 @@ void loop() {
   // Read in the length of the signal in microseconds
   prevCh1 = currentCh1;
   currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
-  //currentCh1 = 1500;
+  //currentCh1 = 2000;
   if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
   currentModeIn = floor(currentCh1/100);
@@ -241,10 +249,11 @@ void loop() {
     stepShow();
   }
   // Are we entering program mode?
-  if (digitalRead(PROGRAM_CYCLE_BTN) == HIGH) { // Is the Program button pressed?
+  if (digitalRead(PROGRAM_CYCLE_BTN) == HIGH && false) { // Is the Program button pressed?
     programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
     if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
       programMode == true;
+      Serial.println("Entering program mode");
       programInit(); //strobe the leds to indicate entering program mode
     }
     progMillis = currentMillis;
@@ -555,13 +564,13 @@ void strobe(int style) {
 void altitude(double fake) {
   static int majorAlt;
   static int minorAlt;
-  static float prevAlt;
-  static int metric;
+  static double prevAlt;
+  //static int metric;
   static int vSpeed;
   static CRGBPalette16 varioPalette = variometer;
   double T, P, A, currentAlt;
   char result = bmp.startMeasurment();
-  metric = metricConversion;  
+  //metric = metricConversion;  
  
   if (result != 0) {
     delay(result);
@@ -569,7 +578,10 @@ void altitude(double fake) {
     
     if (result != 0) {
       A = bmp.altitude(P, P0);
-      currentAlt = (A - baseAlt) * metric; // subtract baseAlt from currentAlt to get AGL
+      A = A * metricConversion;
+      Serial.print("Alt: ");
+      Serial.print(A);
+      currentAlt = (A - baseAlt); // subtract baseAlt from currentAlt to get AGL
       if (currentAlt < 0) {currentAlt = 0;}
       
       if (fake != 0) {currentAlt = fake;}
@@ -617,37 +629,38 @@ void altitude(double fake) {
     fuseleds[i] = CRGB::Black;
   }
   
-
+ }
+ }
   //map vertical speed value to gradient pallet
   avgVSpeed[0]=avgVSpeed[1];
   avgVSpeed[1]=avgVSpeed[2];
   avgVSpeed[2]=int(currentAlt-prevAlt);
-
   vSpeed = (avgVSpeed[0]+avgVSpeed[1]+avgVSpeed[2])/3;
+  //vSpeed = currentAlt - prevAlt;
   if (vSpeed > VSPEED_MAP) {vSpeed = VSPEED_MAP;}
   if (vSpeed < (VSPEED_MAP*-1)) {vSpeed = (VSPEED_MAP*-1);}
   for (int i; i < TAIL_LEDS; i++) {
     tailleds[i] = ColorFromPalette(varioPalette, map(vSpeed, (VSPEED_MAP*-1), VSPEED_MAP, 0, 240));
   }
   prevAlt = currentAlt;
- }
- }
   interval = 100;
   showStrip();
     //Serial.write(27);       // ESC command
     //Serial.print("[2J");    // clear screen command
     //Serial.write(27);
     //Serial.print("[H");     // cursor to home command
-    /*Serial.print("Base: ");
+    Serial.print("  Base: ");
     Serial.print(baseAlt);
     Serial.print("  Current: ");
     Serial.print(currentAlt);
-    Serial.print("  Major: ");
+    Serial.print("  previous: ");
+    Serial.print(prevAlt);
+    /*Serial.print("  Major: ");
     Serial.print(majorAlt);
     Serial.print("  Minor: ");
-    Serial.print(minorAlt);
+    Serial.print(minorAlt);*/
     Serial.print("  vert speed: ");
-    Serial.println(vSpeed);*/
+    Serial.println(vSpeed);
 }
 
 
@@ -725,6 +738,7 @@ void programInit() {
         for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = CRGB::White;}
         for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::White;}
         for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::White;}
+        digitalWrite(LED_BUILTIN, HIGH);
         StrobeState = false;
       } else {
         for (int i = 0; i < NON_NAV_LEDS; i++) {
@@ -734,6 +748,7 @@ void programInit() {
         for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = CRGB::Black;}
         for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::Black;}
         for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::Black;}
+        digitalWrite(LED_BUILTIN, LOW);
         StrobeState = true;
         }
       delay(50);
