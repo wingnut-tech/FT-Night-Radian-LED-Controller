@@ -120,9 +120,9 @@ void setup() {
   } else {
     Serial.println("No startMeasurement");
   }
-  pinMode(PROGRAM_CYCLE_BTN, INPUT);
-  pinMode(PROGRAM_ENABLE_BTN, INPUT);
-  pinMode(PROGRAM_PARAM_BTN, INPUT);
+  pinMode(PROGRAM_CYCLE_BTN, INPUT_PULLUP);
+  pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
+  pinMode(PROGRAM_PARAM_BTN, INPUT_PULLUP);
   pinMode(RC_PIN1, INPUT);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
@@ -198,12 +198,12 @@ void loop() {
     /*  On first run of program mode, read values stored in eeprom into variable array. Then loop through the programs, indicating
      *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command. */
 
-    //if PROGRAM_CYCLE_BTN is low, then high, then low, all within 1 second, then we are cycling through the shows, 
+    //if PROGRAM_CYCLE_BTN is high, then low, then high, all within 1 second, then we are cycling through the shows, 
     //so currentShow++; if (currentShow > NUM_SHOWS) {currentShow = 0;}
     
   
   // Are we exiting program mode?
-  if (digitalRead(PROGRAM_CYCLE_BTN) == HIGH) { // Is the Program button pressed?
+  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
     programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
     if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
       programMode == false;
@@ -249,7 +249,7 @@ void loop() {
     stepShow();
   }
   // Are we entering program mode?
-  if (digitalRead(PROGRAM_CYCLE_BTN) == HIGH && false) { // Is the Program button pressed?
+  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW && false) { // Is the Program button pressed?
     programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
     if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
       programMode == true;
