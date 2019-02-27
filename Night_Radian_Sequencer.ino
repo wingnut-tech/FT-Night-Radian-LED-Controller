@@ -14,8 +14,8 @@
 #define VSPEED_MAP 2
 #define MAX_ALTIMETER 400
 #define WINGTIP_STROBE_LOC 27
-#define PROGRAM_CYCLE_BTN 7
-#define PROGRAM_ENABLE_BTN 6
+#define PROGRAM_CYCLE_BTN 6
+#define PROGRAM_ENABLE_BTN 7
 #define PROGRAM_PARAM_BTN 4
 
 // define the pins that the LED strings are connected to
@@ -141,6 +141,7 @@ void loop() {
   static int programModeCounter = 0;
   static int programButtonPressed = 0;
   static unsigned long currentMillis = millis();
+  static int progEnableBtnHist[] = {0,0,0};
 
   if (firstrun) {
     setInitPattern(); // Set the LED strings to their boot-up configuration
@@ -194,27 +195,6 @@ void loop() {
     showStrip();
   }
 */
-  if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
-    /*  On first run of program mode, read values stored in eeprom into variable array. Then loop through the programs, indicating
-     *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command. */
-
-    //if PROGRAM_CYCLE_BTN is high, then low, then high, all within 1 second, then we are cycling through the shows, 
-    //so currentShow++; if (currentShow > NUM_SHOWS) {currentShow = 0;}
-    
-  
-  // Are we exiting program mode?
-  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
-    programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-    if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
-      programMode == false;
-      Serial.println("Exiting program mode");
-      // store current program values into eeprom
-      programInit(); //strobe the leds to indicate leaving program mode
-    }
-    progMillis = currentMillis;
-  }
-
-
   // The timing control for calling each "frame" of the different animations
   currentMillis = millis();
   if (currentMillis - prevMillis > interval) {
@@ -223,6 +203,32 @@ void loop() {
     //showState(); // indicate whether the current show is enabled or disabled
     stepShow();
   }
+
+  if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
+    /*  On first run of program mode, read values stored in eeprom into variable array. Then loop through the programs, indicating
+     *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command. */
+    
+  
+  // Are we exiting program mode?
+  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
+    programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+    Serial.println(programModeCounter);
+    if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
+      programMode = false;
+      Serial.println("Exiting program mode");
+      // store current program values into eeprom
+      programModeCounter = 0;
+      programInit(); //strobe the leds to indicate leaving program mode
+    }
+  } else {
+    if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
+      currentShow++;
+      if (currentShow > NUM_SHOWS) {currentShow = 0;}
+    }
+    programModeCounter = 0;
+  }
+  progMillis = currentMillis;
+
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
     
@@ -240,24 +246,29 @@ void loop() {
     
     prevModeIn = currentModeIn;
   }
-  }
-
+  
   // The timing control for calling each "frame" of the different animations
-  currentMillis = millis();
+/*  currentMillis = millis();
   if (currentMillis - prevMillis > interval) {
     prevMillis = currentMillis;
     stepShow();
-  }
+  }*/
+  
   // Are we entering program mode?
-  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW && false) { // Is the Program button pressed?
+  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW && programMode == false) { // Is the Program button pressed?
     programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+    Serial.println(programModeCounter);
     if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
-      programMode == true;
+      programMode = true;
+      programModeCounter = 0;
       Serial.println("Entering program mode");
       programInit(); //strobe the leds to indicate entering program mode
     }
-    progMillis = currentMillis;
+  } else {
+    programModeCounter = 0;
   }
+  progMillis = currentMillis;
+}
 }
 
 void stepShow() { // the main menu of different shows
