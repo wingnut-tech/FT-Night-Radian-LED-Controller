@@ -212,21 +212,30 @@ void loop() {
   // Are we exiting program mode?
   if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
     programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-    Serial.println(programModeCounter);
+    //Serial.println(programModeCounter);
     if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
       programMode = false;
       Serial.println("Exiting program mode");
       // store current program values into eeprom
       programModeCounter = 0;
-      programInit(); //strobe the leds to indicate leaving program mode
+      programInit("white"); //strobe the leds to indicate leaving program mode
     }
   } else {
     if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
       currentShow++;
       if (currentShow > NUM_SHOWS) {currentShow = 0;}
     }
+    //programModeCounter = 0;
+    if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
+      programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+      //Serial.println(programModeCounter);
+      if (programModeCounter > 0 && programModeCounter < 1000) { // Has the button been held down for 5 seconds?
+        //toggle the state of the current program, currState = !currState
+        Serial.println("changing program enabled state");
+      }
     programModeCounter = 0;
-  }
+    }
+}
   progMillis = currentMillis;
 
 
@@ -257,12 +266,12 @@ void loop() {
   // Are we entering program mode?
   if (digitalRead(PROGRAM_CYCLE_BTN) == LOW && programMode == false) { // Is the Program button pressed?
     programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-    Serial.println(programModeCounter);
+    //Serial.println(programModeCounter);
     if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
       programMode = true;
       programModeCounter = 0;
       Serial.println("Entering program mode");
-      programInit(); //strobe the leds to indicate entering program mode
+      programInit("white"); //strobe the leds to indicate entering program mode
     }
   } else {
     programModeCounter = 0;
@@ -289,6 +298,20 @@ void stepShow() { // the main menu of different shows
             break;
     case 7: altitude(fakeAlt); // fakeAlt is for testing. Defaults to zero for live data.
             break;
+  }
+  if (currentShow != prevShow) {
+    Serial.print("Current Show: ");
+    Serial.println(currentShow);
+    if (programMode) {
+      
+      //Look up whehter this currentShow is enabled or disabled, and flash the LEDs accordingly
+      if (true) { //This still needs to be defined and populated with the values read from eeprom
+        
+        programInit("green"); //flash all LEDs green to indicate current show is enabled
+      } else {
+        programInit("red"); //flash all LEDs red to indicate current show is disabled
+      }
+    }
   }
   prevShow = currentShow;
 }
@@ -738,17 +761,29 @@ void twinkle1 () {
   showStrip();
 }
 
-void programInit() {
+void programInit(char state) {
+  CRGB color;
+  switch state {
+    case white:
+      color = CRGB::White;
+      break;
+    case green:
+      color = CRGB::Green;
+      break;
+    case red:
+      color = CRGB::Red;
+      break;
+  }
   static bool StrobeState = true;
   for (int j = 0; j <= 10; j++) {
       if (StrobeState) {
         for (int i = 0; i < NON_NAV_LEDS; i++) {
-          rightleds[i] = CRGB::White;
-          leftleds[i] = CRGB::White;
+          rightleds[i] = color;
+          leftleds[i] = color;
         }
-        for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = CRGB::White;}
-        for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::White;}
-        for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::White;}
+        for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = color;}
+        for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = color;}
+        for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = color;}
         digitalWrite(LED_BUILTIN, HIGH);
         StrobeState = false;
       } else {
@@ -765,4 +800,5 @@ void programInit() {
       delay(50);
       showStrip();
   }
+  digitalWrite(LED_BUILTIN, LOW);
 }
