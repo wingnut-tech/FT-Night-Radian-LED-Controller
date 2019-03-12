@@ -34,6 +34,8 @@ double avgVSpeed[] = {0,0,0,0};
 
 int currentCh1 = 0;  // Receiver Channel PPM value
 int prevCh1 = 0; // determine if the Receiver signal changed
+bool programMode = false;
+//String progState = " ";
 
 CRGB rightleds[WING_LEDS];
 CRGB leftleds[WING_LEDS];
@@ -137,7 +139,6 @@ void loop() {
   static int currentModeIn = 0;
   static int wingtipStrobeDelay = 50;
   static bool wingtipStrobeState = false;
-  static bool programMode = false;
   static int programModeCounter = 0;
   static int programButtonPressed = 0;
   static unsigned long currentMillis = millis();
@@ -218,7 +219,7 @@ void loop() {
       Serial.println("Exiting program mode");
       // store current program values into eeprom
       programModeCounter = 0;
-      programInit("white"); //strobe the leds to indicate leaving program mode
+      programInit('w'); //strobe the leds to indicate leaving program mode
     }
   } else {
     if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
@@ -271,7 +272,7 @@ void loop() {
       programMode = true;
       programModeCounter = 0;
       Serial.println("Entering program mode");
-      programInit("white"); //strobe the leds to indicate entering program mode
+      programInit('w'); //strobe the leds to indicate entering program mode
     }
   } else {
     programModeCounter = 0;
@@ -307,9 +308,10 @@ void stepShow() { // the main menu of different shows
       //Look up whehter this currentShow is enabled or disabled, and flash the LEDs accordingly
       if (true) { //This still needs to be defined and populated with the values read from eeprom
         
-        programInit("green"); //flash all LEDs green to indicate current show is enabled
+        programInit('g'); //flash all LEDs green to indicate current show is enabled
       } else {
-        programInit("red"); //flash all LEDs red to indicate current show is disabled
+
+        programInit('r'); //flash all LEDs red to indicate current show is disabled
       }
     }
   }
@@ -761,16 +763,16 @@ void twinkle1 () {
   showStrip();
 }
 
-void programInit(char state) {
+void programInit(char progState) {
   CRGB color;
-  switch state {
-    case white:
+  switch (progState) {
+    case 'w':
       color = CRGB::White;
       break;
-    case green:
+    case 'g':
       color = CRGB::Green;
       break;
-    case red:
+    case 'r':
       color = CRGB::Red;
       break;
   }
