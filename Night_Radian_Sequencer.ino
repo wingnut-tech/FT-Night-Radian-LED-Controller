@@ -305,7 +305,7 @@ void stepShow() { // the main menu of different shows
     Serial.println(currentShow);
     if (programMode) {
       
-      //Look up whehter this currentShow is enabled or disabled, and flash the LEDs accordingly
+      //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
       if (true) { //This still needs to be defined and populated with the values read from eeprom
         
         programInit('g'); //flash all LEDs green to indicate current show is enabled
