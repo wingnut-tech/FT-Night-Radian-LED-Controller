@@ -11,7 +11,7 @@
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
 #define TMP_BRIGHTNESS 55
-#define VSPEED_MAP 2
+#define VSPEED_MAP 5
 #define MAX_ALTIMETER 400
 #define WINGTIP_STROBE_LOC 27
 #define PROGRAM_CYCLE_BTN 6
@@ -35,7 +35,6 @@ double avgVSpeed[] = {0,0,0,0};
 int currentCh1 = 0;  // Receiver Channel PPM value
 int prevCh1 = 0; // determine if the Receiver signal changed
 bool programMode = false;
-//String progState = " ";
 
 CRGB rightleds[WING_LEDS];
 CRGB leftleds[WING_LEDS];
@@ -112,7 +111,7 @@ void setup() {
     result = bmp.getTemperatureAndPressure(T, P);
     if (result != 0) {
       A = bmp.altitude(P, P0);
-      baseAlt = A * metricConversion;
+      baseAlt = int(A * metricConversion);
       //baseAlt = 0; // shows ASL for testing, instead of AGL
       //Serial.print("Base Alt: ");
       //Serial.println(baseAlt);
@@ -291,13 +290,19 @@ void stepShow() { // the main menu of different shows
             break;
     case 3: setColor(pure_white);
             break;
-    case 4: strobe(3); //Realistic double strobe alternating between wings
+    case 4: setColor(variometer); //Realistic double strobe alternating between wings
+            break;
+    case 5: setColor(orange_yellow); //Realistic landing-light style alternating between wings
+            break;
+    case 6: setColor(warm_white); // unrealistic rapid strobe of all non-nav leds
+            break;
+/*    case 4: strobe(3); //Realistic double strobe alternating between wings
             break;
     case 5: strobe(2); //Realistic landing-light style alternating between wings
             break;
     case 6: strobe(1); // unrealistic rapid strobe of all non-nav leds
-            break;
-    case 7: altitude(fakeAlt); // fakeAlt is for testing. Defaults to zero for live data.
+            break;*/
+    case 7: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
   }
   if (currentShow != prevShow) {
@@ -305,7 +310,7 @@ void stepShow() { // the main menu of different shows
     Serial.println(currentShow);
     if (programMode) {
       
-      //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
+      //Look up whehter this currentShow is enabled or disabled, and flash the LEDs accordingly
       if (true) { //This still needs to be defined and populated with the values read from eeprom
         
         programInit('g'); //flash all LEDs green to indicate current show is enabled
@@ -597,13 +602,14 @@ void strobe(int style) {
   }
 }
 
-void altitude(double fake) {
+void altitude(double fake, CRGBPalette16 palette) {
   static int majorAlt;
   static int minorAlt;
   static double prevAlt;
   //static int metric;
   static int vSpeed;
-  static CRGBPalette16 varioPalette = variometer;
+  //static CRGBPalette16 varioPalette = variometer;
+
   double T, P, A, currentAlt;
   char result = bmp.startMeasurment();
   //metric = metricConversion;  
@@ -614,11 +620,11 @@ void altitude(double fake) {
     
     if (result != 0) {
       A = bmp.altitude(P, P0);
-      A = A * metricConversion;
+      A = int(A * metricConversion);
       Serial.print("Alt: ");
       Serial.print(A);
       currentAlt = (A - baseAlt); // subtract baseAlt from currentAlt to get AGL
-      if (currentAlt < 0) {currentAlt = 0;}
+      //if (currentAlt < 0) {currentAlt = 0;}
       
       if (fake != 0) {currentAlt = fake;}
 
@@ -667,16 +673,18 @@ void altitude(double fake) {
   
  }
  }
-  //map vertical speed value to gradient pallet
+  //map vertical speed value to gradient palette
+  int vspeedMap;
   avgVSpeed[0]=avgVSpeed[1];
   avgVSpeed[1]=avgVSpeed[2];
-  avgVSpeed[2]=int(currentAlt-prevAlt);
+  avgVSpeed[2]=(currentAlt-prevAlt);
   vSpeed = (avgVSpeed[0]+avgVSpeed[1]+avgVSpeed[2])/3;
-  //vSpeed = currentAlt - prevAlt;
+  //vSpeed = (currentAlt - prevAlt);
   if (vSpeed > VSPEED_MAP) {vSpeed = VSPEED_MAP;}
   if (vSpeed < (VSPEED_MAP*-1)) {vSpeed = (VSPEED_MAP*-1);}
+  vspeedMap = map(vSpeed, (VSPEED_MAP*-1), VSPEED_MAP, 0, 240);
   for (int i; i < TAIL_LEDS; i++) {
-    tailleds[i] = ColorFromPalette(varioPalette, map(vSpeed, (VSPEED_MAP*-1), VSPEED_MAP, 0, 240));
+    tailleds[i] = ColorFromPalette(palette, vspeedMap);
   }
   prevAlt = currentAlt;
   interval = 100;
@@ -685,18 +693,20 @@ void altitude(double fake) {
     //Serial.print("[2J");    // clear screen command
     //Serial.write(27);
     //Serial.print("[H");     // cursor to home command
-    Serial.print("  Base: ");
+    /*Serial.print("  Base: ");
     Serial.print(baseAlt);
     Serial.print("  Current: ");
     Serial.print(currentAlt);
     Serial.print("  previous: ");
     Serial.print(prevAlt);
-    /*Serial.print("  Major: ");
+    Serial.print("  Major: ");
     Serial.print(majorAlt);
     Serial.print("  Minor: ");
-    Serial.print(minorAlt);*/
+    Serial.print(minorAlt);
     Serial.print("  vert speed: ");
-    Serial.println(vSpeed);
+    Serial.print(vSpeed);
+    Serial.print(" varioPalette: ");
+    Serial.println(vspeedMap);*/
 }
 
 
