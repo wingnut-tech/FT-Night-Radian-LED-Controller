@@ -3,7 +3,6 @@
 #include "src/FastLED/FastLED.h"
 #include "src/BMP280-Arduino-Library/BMP280.h"
 //#include <Adafruit_BMP280.h>
-//git test
 #define P0 1021.97
 // define number of LEDs in specific strings
 #define WING_LEDS 31
