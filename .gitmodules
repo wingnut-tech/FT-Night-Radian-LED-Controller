@@ -1,0 +1,6 @@
+[submodule "src/FastLED"]
+	path = src/FastLED
+	url = git@github.com:FastLED/FastLED.git
+[submodule "src/BMP280-Arduino-Library"]
+	path = src/BMP280-Arduino-Library
+	url = git@github.com:mahfuz195/BMP280-Arduino-Library.git
