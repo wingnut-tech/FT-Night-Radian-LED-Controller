@@ -1,5 +1,5 @@
 #include <FastLED.h>
- #include <BMP280.h>
+#include <BMP280.h>
 //#include <Adafruit_BMP280.h>
 #define P0 1021.97
 // define number of LEDs in specific strings
@@ -149,7 +149,7 @@ void loop() {
   }
   
   // uncomment for wingtip strobes. Still a work in progress.
-/*  unsigned long currentStrobeMillis = millis();
+  /*  unsigned long currentStrobeMillis = millis();
   if (currentStrobeMillis - prevStrobeMillis > wingtipStrobeDelay) {
     prevStrobeMillis = currentStrobeMillis;
     /*Serial.print(" s:");
@@ -194,7 +194,7 @@ void loop() {
     }
     showStrip();
   }
-*/
+  */
   // The timing control for calling each "frame" of the different animations
   currentMillis = millis();
   if (currentMillis - prevMillis > interval) {
@@ -209,75 +209,75 @@ void loop() {
      *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command. */
     
   
-  // Are we exiting program mode?
-  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
-    programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-    //Serial.println(programModeCounter);
-    if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
-      programMode = false;
-      Serial.println("Exiting program mode");
-      // store current program values into eeprom
-      programModeCounter = 0;
-      programInit('w'); //strobe the leds to indicate leaving program mode
-    }
-  } else {
-    if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
-      currentShow++;
-      if (currentShow > NUM_SHOWS) {currentShow = 0;}
-    }
-    //programModeCounter = 0;
-    if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
+    // Are we exiting program mode?
+    if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
       //Serial.println(programModeCounter);
-      if (programModeCounter > 0 && programModeCounter < 1000) { // Has the button been held down for 5 seconds?
-        //toggle the state of the current program, currState = !currState
-        Serial.println("changing program enabled state");
+      if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
+        programMode = false;
+        Serial.println("Exiting program mode");
+        // store current program values into eeprom
+        programModeCounter = 0;
+        programInit('w'); //strobe the leds to indicate leaving program mode
       }
-    programModeCounter = 0;
+    } else {
+      if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
+        currentShow++;
+        if (currentShow > NUM_SHOWS) {currentShow = 0;}
+      }
+      //programModeCounter = 0;
+      if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
+        programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+        //Serial.println(programModeCounter);
+        if (programModeCounter > 0 && programModeCounter < 1000) { // Has the button been held down for 5 seconds?
+          //toggle the state of the current program, currState = !currState
+          Serial.println("changing program enabled state");
+        }
+      programModeCounter = 0;
+      }
     }
-}
-  progMillis = currentMillis;
+    progMillis = currentMillis;
 
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
-    
-  // Read in the length of the signal in microseconds
-  prevCh1 = currentCh1;
-  currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
-  //currentCh1 = 2000;
-  if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
+      
+    // Read in the length of the signal in microseconds
+    prevCh1 = currentCh1;
+    currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
+    //currentCh1 = 2000;
+    if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
-  currentModeIn = floor(currentCh1/100);
-  if (currentModeIn != prevModeIn) {
-    currentShow = map(currentModeIn, 9, 19, 0, NUM_SHOWS-1); // mapping 9-19 to get the 900ms - 1900ms value
-    //currentShow = 7;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
-    //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
-    
-    prevModeIn = currentModeIn;
-  }
-  
-  // The timing control for calling each "frame" of the different animations
-/*  currentMillis = millis();
-  if (currentMillis - prevMillis > interval) {
-    prevMillis = currentMillis;
-    stepShow();
-  }*/
-  
-  // Are we entering program mode?
-  if (digitalRead(PROGRAM_CYCLE_BTN) == LOW && programMode == false) { // Is the Program button pressed?
-    programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-    //Serial.println(programModeCounter);
-    if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
-      programMode = true;
-      programModeCounter = 0;
-      Serial.println("Entering program mode");
-      programInit('w'); //strobe the leds to indicate entering program mode
+    currentModeIn = floor(currentCh1/100);
+    if (currentModeIn != prevModeIn) {
+      currentShow = map(currentModeIn, 9, 19, 0, NUM_SHOWS-1); // mapping 9-19 to get the 900ms - 1900ms value
+      //currentShow = 7;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
+      //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
+      
+      prevModeIn = currentModeIn;
     }
-  } else {
-    programModeCounter = 0;
+    
+    // The timing control for calling each "frame" of the different animations
+    /*  currentMillis = millis();
+    if (currentMillis - prevMillis > interval) {
+      prevMillis = currentMillis;
+      stepShow();
+    }*/
+    
+    // Are we entering program mode?
+    if (digitalRead(PROGRAM_CYCLE_BTN) == LOW && programMode == false) { // Is the Program button pressed?
+      programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+      //Serial.println(programModeCounter);
+      if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
+        programMode = true;
+        programModeCounter = 0;
+        Serial.println("Entering program mode");
+        programInit('w'); //strobe the leds to indicate entering program mode
+      }
+    } else {
+      programModeCounter = 0;
+    }
+    progMillis = currentMillis;
   }
-  progMillis = currentMillis;
-}
 }
 
 void stepShow() { // the main menu of different shows
@@ -290,7 +290,7 @@ void stepShow() { // the main menu of different shows
             break;
     case 3: setColor(pure_white);
             break;
-/*    case 4: setColor(variometer); //Realistic double strobe alternating between wings
+  /*    case 4: setColor(variometer); //Realistic double strobe alternating between wings
             break;
     case 5: setColor(orange_yellow); //Realistic landing-light style alternating between wings
             break;
@@ -628,51 +628,51 @@ void altitude(double fake, CRGBPalette16 palette) {
       
       if (fake != 0) {currentAlt = fake;}
 
-/*  majorAlt = floor(currentAlt/100.0)*3;
-  //Serial.println(majorAlt);
-  minorAlt = int(currentAlt) % 100;
-  minorAlt = map(minorAlt, 0, 100, 0, NON_NAV_LEDS);
-  
-  for (int i=0; i < minorAlt; i++) {
-    rightleds[i] = CRGB::White;
-    leftleds[i] = CRGB::White;
-  }
-  for (int i=minorAlt+1; i <= FUSE_LEDS; i++) {
-    rightleds[i] = CRGB::Black;
-    leftleds[i] = CRGB::Black;
-  }
+      /*  majorAlt = floor(currentAlt/100.0)*3;
+      //Serial.println(majorAlt);
+      minorAlt = int(currentAlt) % 100;
+      minorAlt = map(minorAlt, 0, 100, 0, NON_NAV_LEDS);
+      
+      for (int i=0; i < minorAlt; i++) {
+        rightleds[i] = CRGB::White;
+        leftleds[i] = CRGB::White;
+      }
+      for (int i=minorAlt+1; i <= FUSE_LEDS; i++) {
+        rightleds[i] = CRGB::Black;
+        leftleds[i] = CRGB::Black;
+      }
 
-  for (int i=0; i < majorAlt; i++) {
-    fuseleds[i-2] = CRGB::White;
-    fuseleds[i-1] = CRGB::White;
-    fuseleds[i] = CRGB::White;
-  }
-  for (int i=majorAlt+1; i < FUSE_LEDS; i++) {
-    fuseleds[i-2] = CRGB::Black;
-    fuseleds[i-1] = CRGB::Black;
-    fuseleds[i] = CRGB::Black;
-  }*/
+      for (int i=0; i < majorAlt; i++) {
+        fuseleds[i-2] = CRGB::White;
+        fuseleds[i-1] = CRGB::White;
+        fuseleds[i] = CRGB::White;
+      }
+      for (int i=majorAlt+1; i < FUSE_LEDS; i++) {
+        fuseleds[i-2] = CRGB::Black;
+        fuseleds[i-1] = CRGB::Black;
+        fuseleds[i] = CRGB::Black;
+      }*/
 
-  //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
-  if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
-  
-  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i++) {
-    rightleds[i] = CRGB::White;
-    leftleds[i] = CRGB::White;
+      //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
+      if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
+      
+      for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i++) {
+        rightleds[i] = CRGB::White;
+        leftleds[i] = CRGB::White;
+      }
+      for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i < NON_NAV_LEDS; i++) {
+        rightleds[i] = CRGB::Black;
+        leftleds[i] = CRGB::Black;
+      }
+      for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
+        fuseleds[i] = CRGB::White;
+      }
+      for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
+        fuseleds[i] = CRGB::Black;
+      }
+      
+    }
   }
-  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i < NON_NAV_LEDS; i++) {
-    rightleds[i] = CRGB::Black;
-    leftleds[i] = CRGB::Black;
-  }
-  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
-    fuseleds[i] = CRGB::White;
-  }
-  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
-    fuseleds[i] = CRGB::Black;
-  }
-  
- }
- }
   //map vertical speed value to gradient palette
   int vspeedMap;
   avgVSpeed[0]=avgVSpeed[1];
