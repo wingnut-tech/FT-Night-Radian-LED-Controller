@@ -1,5 +1,7 @@
-#include <FastLED.h>
-#include <BMP280.h>
+// #include <FastLED.h>
+// #include <BMP280.h>
+#include "src/FastLED/FastLED.h"
+#include "src/BMP280-Arduino-Library/BMP280.h"
 //#include <Adafruit_BMP280.h>
 #define P0 1021.97
 // define number of LEDs in specific strings
@@ -67,32 +69,32 @@ char init_tail[] = {'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b'};
 char christmas[] = {'r', 'r', 'r', 'g', 'g', 'g', 'g', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'g', 'g', 'g', 'r', 'r', 'r', 'g', 'g', 'g'};
 
 // Gradients
-DEFINE_GRADIENT_PALETTE( orange_yellow ) {
+DEFINE_GRADIENT_PALETTE( orange_yellow ) {  //RGB(255,165,0) RGB(255,244,175) RGB(255,246,0)
   0,   255,165,  0,   //orange
 128,   255,244,175,   //bright white-yellow
 255,   255,246,  0 }; //
 
-DEFINE_GRADIENT_PALETTE( teal_blue ) {
+DEFINE_GRADIENT_PALETTE( teal_blue ) {      //RGB(0,244,216) RGB(48,130,219)
   0,     0,244,216,   //tealish
 255,    48,130,219 }; //blueish
 
-DEFINE_GRADIENT_PALETTE( pure_white ) {
+DEFINE_GRADIENT_PALETTE( pure_white ) {     //RGB(255,255,255)
   0,    255,255,255,
 255,    255,255,255 };
 
-DEFINE_GRADIENT_PALETTE( warm_white ) {
+DEFINE_GRADIENT_PALETTE( warm_white ) {     //RGB(255,172, 68)
   0,    255,172, 68,
 255,    255,172, 68 };
 
-DEFINE_GRADIENT_PALETTE( blue ) {
+DEFINE_GRADIENT_PALETTE( blue ) {           //RGB(0,0,255)
   0,    0,0,255,
 255,    0,0,255 };
 
-DEFINE_GRADIENT_PALETTE( blue_black ) {
+DEFINE_GRADIENT_PALETTE( blue_black ) {     //RGB(0,0,0) RGB(0,0,255)
   0,    0,0,0,
 255,    0,0,255 };
 
-DEFINE_GRADIENT_PALETTE( variometer ) {
+DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(0,255,0)
   0,    255,0,0, //Red
 128,    255,255,255, //White
 255,    0,255,0 }; //Green
