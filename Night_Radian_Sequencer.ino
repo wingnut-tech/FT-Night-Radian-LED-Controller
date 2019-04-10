@@ -10,7 +10,7 @@
 #define TAIL_LEDS 8
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
-#define TMP_BRIGHTNESS 55
+//#define TMP_BRIGHTNESS 55
 #define VSPEED_MAP 5
 #define MAX_ALTIMETER 400
 #define WINGTIP_STROBE_LOC 27
@@ -290,18 +290,18 @@ void stepShow() { // the main menu of different shows
             break;
     case 3: setColor(pure_white);
             break;
-    case 4: setColor(variometer); //Realistic double strobe alternating between wings
+/*    case 4: setColor(variometer); //Realistic double strobe alternating between wings
             break;
     case 5: setColor(orange_yellow); //Realistic landing-light style alternating between wings
             break;
     case 6: setColor(warm_white); // unrealistic rapid strobe of all non-nav leds
-            break;
-/*    case 4: strobe(3); //Realistic double strobe alternating between wings
+            break;*/
+    case 4: strobe(3); //Realistic double strobe alternating between wings
             break;
     case 5: strobe(2); //Realistic landing-light style alternating between wings
             break;
     case 6: strobe(1); // unrealistic rapid strobe of all non-nav leds
-            break;*/
+            break;
     case 7: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
   }
