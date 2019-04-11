@@ -57,7 +57,14 @@ int interval;
 BMP280 bmp;
 float relativeAlt;
 
-// Static patterns
+
+//       _        _   _                    _   _                       
+//   ___| |_ __ _| |_(_) ___   _ __   __ _| |_| |_ ___ _ __ _ __  ___  
+//  / __| __/ _` | __| |/ __| | '_ \ / _` | __| __/ _ \ '__| '_ \/ __| 
+//  \__ \ || (_| | |_| | (__  | |_) | (_| | |_| ||  __/ |  | | | \__ \ 
+//  |___/\__\__,_|\__|_|\___| | .__/ \__,_|\__|\__\___|_|  |_| |_|___/ 
+//                            |_|                                      
+
 char usflag[] = {'b', 'b', 'b', 'w', 'w', 'w', 'w', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'w', 'w', 'w', 'r', 'r', 'r', 'b', 'b', 'b'};
 char init_rightwing[] = {'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g'};
 char rightwing[] = {'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g'};
@@ -68,7 +75,13 @@ char init_fuse[] = {'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 
 char init_tail[] = {'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b'};
 char christmas[] = {'r', 'r', 'r', 'g', 'g', 'g', 'g', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'g', 'g', 'g', 'r', 'r', 'r', 'g', 'g', 'g'};
 
-// Gradients
+//                       _ _            _        
+//    __ _ _ __ __ _  __| (_) ___ _ __ | |_ ___  
+//   / _` | '__/ _` |/ _` | |/ _ \ '_ \| __/ __| 
+//  | (_| | | | (_| | (_| | |  __/ | | | |_\__ \ 
+//   \__, |_|  \__,_|\__,_|_|\___|_| |_|\__|___/ 
+//   |___/                                       
+
 DEFINE_GRADIENT_PALETTE( orange_yellow ) {  //RGB(255,165,0) RGB(255,244,175) RGB(255,246,0)
   0,   255,165,  0,   //orange
 128,   255,244,175,   //bright white-yellow
@@ -98,6 +111,13 @@ DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(
   0,    255,0,0, //Red
 128,    255,255,255, //White
 255,    0,255,0 }; //Green
+
+//            _                
+//   ___  ___| |_ _   _ _ __   
+//  / __|/ _ \ __| | | | '_ \  
+//  \__ \  __/ |_| |_| | |_) | 
+//  |___/\___|\__|\__,_| .__/  
+//                     |_|     
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -133,6 +153,13 @@ void setup() {
   FastLED.addLeds<NEOPIXEL, NOSE_PIN>(noseleds, NOSE_LEDS);
   FastLED.addLeds<NEOPIXEL, TAIL_PIN>(tailleds, TAIL_LEDS);
 }
+
+//                   _         _                    
+//   _ __ ___   __ _(_)_ __   | | ___   ___  _ __   
+//  | '_ ` _ \ / _` | | '_ \  | |/ _ \ / _ \| '_ \  
+//  | | | | | | (_| | | | | | | | (_) | (_) | |_) | 
+//  |_| |_| |_|\__,_|_|_| |_| |_|\___/ \___/| .__/  
+//                                          |_|     
 
 void loop() {
   static bool firstrun = true;
@@ -282,6 +309,13 @@ void loop() {
   }
 }
 
+//       _                   _                    
+//   ___| |_ ___ _ __    ___| |__   _____      __ 
+//  / __| __/ _ \ '_ \  / __| '_ \ / _ \ \ /\ / / 
+//  \__ \ ||  __/ |_) | \__ \ | | | (_) \ V  V /  
+//  |___/\__\___| .__/  |___/_| |_|\___/ \_/\_/   
+//              |_|                               
+
 void stepShow() { // the main menu of different shows
   switch (currentShow) {
     case 0: blank(); //all off
@@ -325,7 +359,13 @@ void stepShow() { // the main menu of different shows
   prevShow = currentShow;
 }
 
-// Helper functions
+//   _          _                    __                  _   _                  
+//  | |__   ___| |_ __   ___ _ __   / _|_   _ _ __   ___| |_(_) ___  _ __  ___  
+//  | '_ \ / _ \ | '_ \ / _ \ '__| | |_| | | | '_ \ / __| __| |/ _ \| '_ \/ __| 
+//  | | | |  __/ | |_) |  __/ |    |  _| |_| | | | | (__| |_| | (_) | | | \__ \ 
+//  |_| |_|\___|_| .__/ \___|_|    |_|  \__,_|_| |_|\___|\__|_|\___/|_| |_|___/ 
+//               |_|                                                            
+
 void showStrip () {
   #ifdef TMP_BRIGHTNESS
   FastLED.setBrightness(TMP_BRIGHTNESS);
@@ -425,10 +465,12 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
   interval = 20;
   showStrip();
 }
-// End helper functions
 
-
-// Animations
+//               _                 _   _                  
+//    __ _ _ __ (_)_ __ ___   __ _| |_(_) ___  _ __  ___  
+//   / _` | '_ \| | '_ ` _ \ / _` | __| |/ _ \| '_ \/ __| 
+//  | (_| | | | | | | | | | | (_| | |_| | (_) | | | \__ \ 
+//   \__,_|_| |_|_|_| |_| |_|\__,_|\__|_|\___/|_| |_|___/ 
 
 void colorWave1 (int ledOffset) {
   if (prevShow != currentShow) {blank();}
