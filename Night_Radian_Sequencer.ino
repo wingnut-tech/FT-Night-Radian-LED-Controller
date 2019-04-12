@@ -29,6 +29,9 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define NUM_SHOWS 8
+
+#define TESTING 1
+
 double metricConversion = 3.3;
 double baseAlt;
 double fakeAlt = 0;
