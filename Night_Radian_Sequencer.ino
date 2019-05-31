@@ -473,7 +473,7 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
 //  | (_| | | | | | | | | | | (_| | |_| | (_) | | | \__ \ 
 //   \__,_|_| |_|_|_| |_| |_|\__,_|\__|_|\___/|_| |_|___/ 
 
-void colorWave1 (int ledOffset) {
+void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
   if (prevShow != currentShow) {blank();}
   static int currentStep = 0;
   if (currentStep > 255) {currentStep = 0;}
@@ -487,7 +487,7 @@ void colorWave1 (int ledOffset) {
   showStrip();
 }
 
-void chase() {
+void chase() { // White segment that chases through the wings
   static int chaseStep = 0;
   if (prevShow != currentShow) {blank();} // blank all LEDs at the start of this show
   
@@ -515,7 +515,7 @@ void chase() {
 }
 
 
-void strobe(int style) {
+void strobe(int style) { // Various strobe patterns (duh)
   static bool StrobeState = true;
   if (prevShow != currentShow) {blank();}
 
@@ -647,7 +647,7 @@ void strobe(int style) {
   }
 }
 
-void altitude(double fake, CRGBPalette16 palette) {
+void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   static int majorAlt;
   static int minorAlt;
   static double prevAlt;
@@ -759,7 +759,7 @@ void altitude(double fake, CRGBPalette16 palette) {
 //      Needs to be re-written to handle all leds together,
 //      versus treating each section (nose, fuse, wings, etc) individually.
 enum {SteadyDim, Dimming, Brightening};
-void twinkle1 () {
+void twinkle1 () { // Random twinkle effect on all LEDs
   static int pixelState[NON_NAV_LEDS];
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
@@ -767,7 +767,7 @@ void twinkle1 () {
   const CRGB colorMin = CRGB(4, 4, 4);
   const int twinkleChance = 1;
 
-  if (prevShow != currentShow) {
+  if (prevShow != currentShow) { // Reset everything at start of show
     memset(pixelState, SteadyDim, sizeof(pixelState));
     for (int i = 0; i < NON_NAV_LEDS; i++) {
       rightleds[i] = colorMin;
