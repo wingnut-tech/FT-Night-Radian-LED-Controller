@@ -2,6 +2,7 @@
 // #include <BMP280.h>
 #include "src/FastLED/FastLED.h"
 #include "src/BMP280-Arduino-Library/BMP280.h"
+#include <EEPROM.h>
 //#include <Adafruit_BMP280.h>
 #define P0 1021.97
 // define number of LEDs in specific strings
@@ -113,6 +114,40 @@ DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(
 128,    255,255,255, //White
 255,    0,255,0 }; //Green
 
+
+//   ___  ___ _ __  _ __ ___  _ __ ___  
+//  / _ \/ _ \ '_ \| '__/ _ \| '_ ` _ \ 
+// |  __/  __/ |_) | | | (_) | | | | | |
+//  \___|\___| .__/|_|  \___/|_| |_| |_|
+//           |_|                        
+
+#define CONFIG_VERSION 0xAA01
+#define CONFIG_START 16
+
+struct Config {
+  uint16_t version;
+  bool enabled[NUM_SHOWS];
+} config;
+
+void loadConfig() {
+  EEPROM.get(CONFIG_START, config)
+  if (config.version != CONFIG_VERSION) {}
+    // setup defaults
+    config.version = CONFIG_VERSION;
+    memset(config.enabled, true, sizeof(config.enabled));
+    saveConfig();
+  }
+}
+
+void saveConfig() {
+  EEPROM.put(CONFIG_START, config);
+  // EEPROM.put() theoretically only pushes changed bytes, so should be safe.
+  // Otherwise, this is an alternative method:
+
+  // for (int i=0; i<sizeof(config); i++)
+  //   EEPROM.update(CONFIG_START + i, *((char*)&config + i));
+}
+
 //            _                
 //   ___  ___| |_ _   _ _ __   
 //  / __|/ _ \ __| | | | '_ \  
@@ -121,9 +156,20 @@ DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(
 //                     |_|     
 
 void setup() {
+  Serial.begin(115200);
+
+  loadConfig();
+  // if (loadConfig()) {
+  //   Serial.println("Config loaded:");
+  //   Serial.println(config.version);
+  // } else {
+  //   Serial.println("Config missing/wrong version!");
+  //   Serial.println("Initializing defaults...");
+  //   saveConfig();
+  // }
+
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
-  Serial.begin(115200);
 
   bmp.begin(); // initialize the altitude pressure sensor
   bmp.setOversampling(4);
