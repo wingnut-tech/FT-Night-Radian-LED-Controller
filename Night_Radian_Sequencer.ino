@@ -34,8 +34,8 @@
 #define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
 #define CONFIG_START 0 // starting EEPROM address for our config
 
-uint8_t showNumbers[NUM_SHOWS]; // our array of currently active show numbers
-uint8_t numActiveShows = NUM_SHOWS;
+uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show numbers
+uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
 double metricConversion = 3.3;
 double baseAlt;
@@ -154,11 +154,11 @@ void saveConfig() { // saves current config to EEPROM
   updateShowConfig();
 }
 
-void updateShowConfig() { // sets order of currently active shows. e.g., showNumbers[] = {1, 4, 5, 9}
+void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}
   numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
   for (uint8_t i = 0; i < NUM_SHOWS; i++) {
     if (config.enabledShows[i]) {
-      showNumbers[numActiveShows] = i;
+      activeShowNumbers[numActiveShows] = i;
       numActiveShows++;
     }
   }
@@ -309,6 +309,7 @@ void loop() {
         programMode = false;
         Serial.println("Exiting program mode");
         // store current program values into eeprom
+        saveConfig();
         programModeCounter = 0;
         programInit('w'); //strobe the leds to indicate leaving program mode
       }
@@ -323,6 +324,7 @@ void loop() {
         //Serial.println(programModeCounter);
         if (programModeCounter > 0 && programModeCounter < 1000) { // Has the button been held down for 5 seconds?
           //toggle the state of the current program, currState = !currState
+          config.enabledShows[currentShow] = !config.enabledShows[currentShow];
           Serial.println("changing program enabled state");
         }
       programModeCounter = 0;
@@ -341,7 +343,7 @@ void loop() {
 
     currentModeIn = floor(currentCh1/100);
     if (currentModeIn != prevModeIn) {
-      currentShow = map(currentModeIn, 9, 19, 0, NUM_SHOWS-1); // mapping 9-19 to get the 900ms - 1900ms value
+      currentShow = map(currentModeIn, 9, 19, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
       //currentShow = 7;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
       
@@ -380,7 +382,7 @@ void loop() {
 //              |_|                               
 
 void stepShow() { // the main menu of different shows
-  switch (currentShow) {
+  switch (activeShowNumbers[currentShow]) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
     case 0: blank(); //all off
             break;
     case 1: colorWave1(10);//regular rainbow
@@ -409,12 +411,10 @@ void stepShow() { // the main menu of different shows
     Serial.println(currentShow);
     if (programMode) {
       
-      //Look up whehter this currentShow is enabled or disabled, and flash the LEDs accordingly
-      if (true) { //This still needs to be defined and populated with the values read from eeprom
-        
+      //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
+      if (config.enabledShows[currentShow]) { // this should now check EEPROM config
         programInit('g'); //flash all LEDs green to indicate current show is enabled
       } else {
-
         programInit('r'); //flash all LEDs red to indicate current show is disabled
       }
     }
