@@ -133,7 +133,7 @@ struct Config { // this is the main config struct that holds everything we'd wan
 } config;
 
 void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
-  EEPROM.get(CONFIG_START, config)
+  EEPROM.get(CONFIG_START, config);
   if (config.version != CONFIG_VERSION) {
     // setup defaults
     config.version = CONFIG_VERSION;
