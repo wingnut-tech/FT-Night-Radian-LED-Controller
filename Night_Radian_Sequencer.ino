@@ -31,6 +31,12 @@
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define NUM_SHOWS 8
 
+#define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
+#define CONFIG_START 0 // starting EEPROM address for our config
+
+uint8_t showNumbers[NUM_SHOWS]; // our array of currently active show numbers
+uint8_t numActiveShows = NUM_SHOWS;
+
 double metricConversion = 3.3;
 double baseAlt;
 double fakeAlt = 0;
@@ -121,31 +127,41 @@ DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(
 //  \___|\___| .__/|_|  \___/|_| |_| |_|
 //           |_|                        
 
-#define CONFIG_VERSION 0xAA01
-#define CONFIG_START 16
-
-struct Config {
+struct Config { // this is the main config struct that holds everything we'd want to save/load from EEPROM
   uint16_t version;
-  bool enabled[NUM_SHOWS];
+  bool enabledShows[NUM_SHOWS];
 } config;
 
-void loadConfig() {
+void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
   EEPROM.get(CONFIG_START, config)
-  if (config.version != CONFIG_VERSION) {}
+  if (config.version != CONFIG_VERSION) {
     // setup defaults
     config.version = CONFIG_VERSION;
-    memset(config.enabled, true, sizeof(config.enabled));
+    memset(config.enabledShows, true, sizeof(config.enabledShows)); // set all entries of enabledShows to true by default
     saveConfig();
+  } else { // only run update if we didn't just make defaults, as saveConfig() already does this
+    updateShowConfig();
   }
 }
 
-void saveConfig() {
+void saveConfig() { // saves current config to EEPROM
   EEPROM.put(CONFIG_START, config);
   // EEPROM.put() theoretically only pushes changed bytes, so should be safe.
   // Otherwise, this is an alternative method:
 
   // for (int i=0; i<sizeof(config); i++)
   //   EEPROM.update(CONFIG_START + i, *((char*)&config + i));
+  updateShowConfig();
+}
+
+void updateShowConfig() { // sets order of currently active shows. e.g., showNumbers[] = {1, 4, 5, 9}
+  numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
+  for (uint8_t i = 0; i < NUM_SHOWS; i++) {
+    if (config.enabledShows[i]) {
+      showNumbers[numActiveShows] = i;
+      numActiveShows++;
+    }
+  }
 }
 
 //            _                
