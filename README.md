@@ -7,4 +7,4 @@ When cloning, use:
 ```
 git clone --recurse-submodules https://github.com/mapleacrefarm/FT_Night_Radian_LED_Controller.git
 ```
-to clone the dependancies along with the project.
+to clone the dependencies along with the project.
