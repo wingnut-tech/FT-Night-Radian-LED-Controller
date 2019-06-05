@@ -759,13 +759,46 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 //      Needs to be re-written to handle all leds together,
 //      versus treating each section (nose, fuse, wings, etc) individually.
 enum {SteadyDim, Dimming, Brightening};
-void twinkle1 () { // Random twinkle effect on all LEDs
-  static int pixelState[NON_NAV_LEDS];
+void doTwinkle1(CRGB *ledArray, int *pixelState, int size) {
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
   const CRGB colorMin = CRGB(4, 4, 4);
   const int twinkleChance = 1;
+
+  for (int i = 0; i < size; i++) {
+    if (*pixelState[i] == SteadyDim) {
+      if (random8() < twinkleChance) {
+        *pixelstate[i] = Brightening;
+      }
+    }
+
+    if (*pixelState[i] == Brightening) {
+      if (*ledArray[i] >= colorMax) {
+        *pixelState[i] = Dimming;
+      } else {
+        *ledArray[i] += colorUp;
+      }
+    }
+
+    if (*pixelState[i] == Dimming) {
+      if (*ledArray[i] <= colorMin) {
+        *ledArray[i] = colorMin;
+        *pixelState[i] = SteadyDim;
+      } else {
+        *ledArray[i] -= colorDown;
+      }
+    }
+  }
+}
+
+void twinkle1 () { // Random twinkle effect on all LEDs
+  static int pixelStateRight[NON_NAV_LEDS];
+  static int pixelStateLeft[NON_NAV_LEDS];
+  static int pixelStateNose[NOSE_LEDS];
+  static int pixelStateFuse[FUSE_LEDS];
+  static int pixelStateTail[TAIL_LEDS];
+  const CRGB colorMin = CRGB(4, 4, 4);
 
   if (prevShow != currentShow) { // Reset everything at start of show
     memset(pixelState, SteadyDim, sizeof(pixelState));
@@ -778,42 +811,48 @@ void twinkle1 () { // Random twinkle effect on all LEDs
     }
   }
 
-  for (int i = 0; i < NON_NAV_LEDS; i++) {
-    if (pixelState[i] == SteadyDim) {
-      if (random8() < twinkleChance) {
-        pixelState[i] = Brightening;
-      }
-    }
+  doTwinkle1(&rightleds, &pixelStateRight, NON_NAV_LEDS);
+  doTwinkle1(&leftleds, &pixelStateLeft, NON_NAV_LEDS);
+  doTwinkle1(&noseleds, &pixelStateNose, NOSE_LEDS);
+  doTwinkle1(&fuseleds, &pixelStateFuse, FUSE_LEDS);
+  doTwinkle1(&tailleds, &pixelStateTail, TAIL_LEDS);
 
-    if (pixelState[i] == Brightening) {
-      if (rightleds[i] >= colorMax) {
-        pixelState[i] = Dimming;
-      } else {
-        rightleds[i] += colorUp;
-        leftleds[i] += colorUp;
-        if (i < NOSE_LEDS) {noseleds[i] += colorUp;}
-        if (i < FUSE_LEDS) {fuseleds[i] += colorUp;}
-        if (i < TAIL_LEDS) {tailleds[i] += colorUp;}
+  // for (int i = 0; i < NON_NAV_LEDS; i++) {
+  //   if (pixelState[i] == SteadyDim) {
+  //     if (random8() < twinkleChance) {
+  //       pixelState[i] = Brightening;
+  //     }
+  //   }
 
-      }
-    }
-    if (pixelState[i] == Dimming) {
-      if (rightleds[i] <= colorMin) {
-        rightleds[i] = colorMin;
-        leftleds[i] = colorMin;
-        noseleds[i] = colorMin;
-        fuseleds[i] = colorMin;
-        tailleds[i] = colorMin;
-        pixelState[i] = SteadyDim;
-      } else {
-        rightleds[i] -= colorDown;
-        leftleds[i] -= colorDown;
-        if (i < NOSE_LEDS) {noseleds[i] += colorDown;}
-        if (i < FUSE_LEDS) {fuseleds[i] += colorDown;}
-        if (i < TAIL_LEDS) {tailleds[i] += colorDown;}
-      }
-    }
-  }
+  //   if (pixelState[i] == Brightening) {
+  //     if (rightleds[i] >= colorMax) {
+  //       pixelState[i] = Dimming;
+  //     } else {
+  //       rightleds[i] += colorUp;
+  //       leftleds[i] += colorUp;
+  //       if (i < NOSE_LEDS) {noseleds[i] += colorUp;}
+  //       if (i < FUSE_LEDS) {fuseleds[i] += colorUp;}
+  //       if (i < TAIL_LEDS) {tailleds[i] += colorUp;}
+
+  //     }
+  //   }
+  //   if (pixelState[i] == Dimming) {
+  //     if (rightleds[i] <= colorMin) {
+  //       rightleds[i] = colorMin;
+  //       leftleds[i] = colorMin;
+  //       noseleds[i] = colorMin;
+  //       fuseleds[i] = colorMin;
+  //       tailleds[i] = colorMin;
+  //       pixelState[i] = SteadyDim;
+  //     } else {
+  //       rightleds[i] -= colorDown;
+  //       leftleds[i] -= colorDown;
+  //       if (i < NOSE_LEDS) {noseleds[i] += colorDown;}
+  //       if (i < FUSE_LEDS) {fuseleds[i] += colorDown;}
+  //       if (i < TAIL_LEDS) {tailleds[i] += colorDown;}
+  //     }
+  //   }
+  // }
   interval = 10;
   showStrip();
 }
