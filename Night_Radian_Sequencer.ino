@@ -130,6 +130,7 @@ DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(
 struct Config { // this is the main config struct that holds everything we'd want to save/load from EEPROM
   uint16_t version;
   bool enabledShows[NUM_SHOWS];
+  bool navlights;
 } config;
 
 void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
@@ -138,6 +139,8 @@ void loadConfig() { // loads existing config from EEPROM, or if wrong version, s
     // setup defaults
     config.version = CONFIG_VERSION;
     memset(config.enabledShows, true, sizeof(config.enabledShows)); // set all entries of enabledShows to true by default
+    config.navlights = true;
+    
     saveConfig();
   } else { // only run update if we didn't just make defaults, as saveConfig() already does this
     updateShowConfig();
@@ -388,10 +391,11 @@ void loop() {
 //              |_|                               
 
 void stepShow() { // the main menu of different shows
+int switchShow;
   if (programMode) {
-    int switchShow = currentShow;
+    switchShow = currentShow;
   } else {
-    int switchShow = activeShowNumbers[currentShow];
+    switchShow = activeShowNumbers[currentShow];
   }
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
     case -1: strobe(1); // programMode strobe() preview. Should only get this case if we're in program mode.
