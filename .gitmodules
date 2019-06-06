@@ -3,4 +3,4 @@
 	url = https://github.com/FastLED/FastLED.git
 [submodule "src/BMP280-Arduino-Library"]
 	path = src/BMP280-Arduino-Library
-	url = https://github.com/mahfuz195/BMP280-Arduino-Library.git
+	url = https://github.com/reyemxela/BMP280-Arduino-Library.git
