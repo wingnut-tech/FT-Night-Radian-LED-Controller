@@ -296,6 +296,12 @@ void loop() {
     stepShow();
   }
 
+  if (currentMillis - prevMillis > 30) {
+    if (config.navlights) { // navlights if enabled
+      strobe(0);
+    }
+  }
+
   if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
     /*  On first run of program mode, read values stored in eeprom into variable array. Then loop through the programs, indicating
      *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command. */
@@ -412,9 +418,6 @@ void stepShow() { // the main menu of different shows
             break;
     case 7: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
-  }
-  if (!programMode && config.navlights) { // if we're not in programMode, then do navlights if enabled
-    strobe(1);
   }
   if (currentShow != prevShow) {
     Serial.print("Current Show: ");
@@ -586,12 +589,45 @@ void chase() { // White segment that chases through the wings
   interval = 30;
 }
 
+void setNavLeds(CRGB rcolor, CRGB lcolor) {
+  for (int i = NON_NAV_LEDS; i < WING_LEDS; i++) {
+    rightleds[i] = rcolor;
+    leftleds[i] = lcolor;
+  }
+}
 
 void strobe(int style) { // Various strobe patterns (duh)
   static bool StrobeState = true;
+  static int strobeStepCounter = 0;
   if (prevShow != currentShow) {blank();}
 
   switch(style) {
+
+    case 0: // new realistic strobing using the new timing system?
+      switch(strobeStepCounter) {
+        case 0:
+          // red/green
+          setNavLeds(CRGB::Red, CRGB::Green);
+          break;
+        case 50:
+          // strobe 1
+          setNavLeds(CRGB::White, CRGB::White);
+          break;
+        case 52:
+          // back to red/green
+          setNavLeds(CRGB::Red, CRGB::Green);
+          break;
+        case 54:
+          // strobe 2
+          setNavLeds(CRGB::White, CRGB::White);
+          break;
+        case 56:
+          // red/green again
+          setNavLeds(CRGB::Red, CRGB::Green);
+          strobeStepCounter = 0;
+          break;
+      }
+      strobeStepCounter++;
 
     case 1: //Rapid strobing all LEDS in unison
       if (StrobeState) {
