@@ -382,7 +382,12 @@ void loop() {
 //              |_|                               
 
 void stepShow() { // the main menu of different shows
-  switch (activeShowNumbers[currentShow]) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
+  if (programMode) {
+    int switchShow = currentShow;
+  } else {
+    int switchShow = activeShowNumbers[currentShow];
+  }
+  switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
     case 0: blank(); //all off
             break;
     case 1: colorWave1(10);//regular rainbow
