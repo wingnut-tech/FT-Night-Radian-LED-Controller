@@ -316,7 +316,7 @@ void loop() {
     } else {
       if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
         currentShow++;
-        if (currentShow > NUM_SHOWS) {currentShow = 0;}
+        if (currentShow > NUM_SHOWS) {currentShow = -1;} // -1 is strobe() preview
       }
       //programModeCounter = 0;
       if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
@@ -388,6 +388,8 @@ void stepShow() { // the main menu of different shows
     int switchShow = activeShowNumbers[currentShow];
   }
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
+    case -1: strobe(1); // programMode strobe() preview. Should only get this case if we're in program mode.
+            break;
     case 0: blank(); //all off
             break;
     case 1: colorWave1(10);//regular rainbow
@@ -410,6 +412,9 @@ void stepShow() { // the main menu of different shows
             break;
     case 7: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
+  }
+  if (!programMode && config.navlights) { // if we're not in programMode, then do navlights if enabled
+    strobe(1);
   }
   if (currentShow != prevShow) {
     Serial.print("Current Show: ");
