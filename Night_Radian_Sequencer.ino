@@ -34,6 +34,8 @@
 #define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
 #define CONFIG_START 0 // starting EEPROM address for our config
 
+int wingNavPoint = NON_NAV_LEDS;
+
 uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show numbers
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
@@ -157,13 +159,18 @@ void saveConfig() { // saves current config to EEPROM
   updateShowConfig();
 }
 
-void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}
+void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}. also sets nav stop point.
   numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
   for (uint8_t i = 0; i < NUM_SHOWS; i++) {
     if (config.enabledShows[i]) {
       activeShowNumbers[numActiveShows] = i;
       numActiveShows++;
     }
+  }
+  if (config.navlights) {
+    wingNavPoint = NON_NAV_LEDS;
+  } else {
+    wingNavPoint = WING_LEDS;
   }
 }
 
@@ -454,7 +461,7 @@ void showStrip () {
 }
 
 void blank() { // Turn off all LEDs
-  for (int i = 0; i < NON_NAV_LEDS; i++) {
+  for (int i = 0; i < wingNavPoint; i++) {
     rightleds[i] = CRGB::Black;
     leftleds[i] = CRGB::Black;
   }
@@ -465,9 +472,9 @@ void blank() { // Turn off all LEDs
 }
 
 void setColor (CRGBPalette16 palette) {
-  for (int i; i < NON_NAV_LEDS; i++) {
-    rightleds[i] = ColorFromPalette(palette, map(i, 0, NON_NAV_LEDS, 0, 240));
-    leftleds[i] = ColorFromPalette(palette, map(i, 0, NON_NAV_LEDS, 0, 240));
+  for (int i; i < wingNavPoint; i++) {
+    rightleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
+    leftleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
     if (i < NOSE_LEDS) {noseleds[i] = ColorFromPalette(palette, map(i, 0, NOSE_LEDS, 0, 240));}
     if (i < FUSE_LEDS) {fuseleds[i] = ColorFromPalette(palette, map(i, 0, FUSE_LEDS, 0, 240));}
     if (i < TAIL_LEDS) {tailleds[i] = ColorFromPalette(palette, map(i, 0, TAIL_LEDS, 0, 240));}
@@ -498,7 +505,7 @@ CRGB LetterToColor (char letter) { // Convert the letters in the static patterns
 //TODO: test and make sure this new LetterToColor function actually works.
 //      If it does, we can nuke all of this redundant commented code.
 void setPattern (char pattern[]) {
-  for (int i = 0; i < NON_NAV_LEDS; i++) {
+  for (int i = 0; i < wingNavPoint; i++) {
     rightleds[i] = LetterToColor(pattern[i]);
     leftleds[i] = LetterToColor(pattern[i]);
   }
@@ -535,7 +542,7 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
   static int currentStep = 0;
 
   if (currentStep > 255) {currentStep = 0;}
-  for (int i = 0; i < NON_NAV_LEDS; i++) {
+  for (int i = 0; i < wingNavPoint; i++) {
       int j = triwave8((i * ledOffset) + currentStep);
       rightleds[i] = ColorFromPalette(palette, scale8(j, 240));
       leftleds[i] = ColorFromPalette(palette, scale8(j, 240));
@@ -556,7 +563,7 @@ void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
   if (prevShow != currentShow) {blank();}
   static int currentStep = 0;
   if (currentStep > 255) {currentStep = 0;}
-  for (int j = 0; j < NON_NAV_LEDS; j++) {
+  for (int j = 0; j < wingNavPoint; j++) {
     rightleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);
     leftleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);
     if (j < FUSE_LEDS) {fuseleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);}
@@ -570,9 +577,9 @@ void chase() { // White segment that chases through the wings
   static int chaseStep = 0;
   if (prevShow != currentShow) {blank();} // blank all LEDs at the start of this show
   
-  if (chaseStep > NON_NAV_LEDS) {
-    rightleds[NON_NAV_LEDS] = CRGB::Black;
-    leftleds[NON_NAV_LEDS] = CRGB::Black;
+  if (chaseStep > wingNavPoint) {
+    rightleds[wingNavPoint] = CRGB::Black;
+    leftleds[wingNavPoint] = CRGB::Black;
     chaseStep = 0;
   }
 
@@ -594,7 +601,7 @@ void chase() { // White segment that chases through the wings
 }
 
 void setNavLeds(CRGB rcolor, CRGB lcolor) {
-  for (int i = NON_NAV_LEDS; i < WING_LEDS; i++) {
+  for (int i = wingNavPoint; i < WING_LEDS; i++) {
     rightleds[i] = rcolor;
     leftleds[i] = lcolor;
   }
@@ -635,7 +642,7 @@ void strobe(int style) { // Various strobe patterns (duh)
 
     case 1: //Rapid strobing all LEDS in unison
       if (StrobeState) {
-        for (int i = 0; i < NON_NAV_LEDS; i++) {
+        for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = CRGB::White;
           leftleds[i] = CRGB::White;
         }
@@ -644,7 +651,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::White;}
         StrobeState = false;
       } else {
-        for (int i = 0; i < NON_NAV_LEDS; i++) {
+        for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = CRGB::Black;
           leftleds[i] = CRGB::Black;
         }
@@ -659,7 +666,7 @@ void strobe(int style) { // Various strobe patterns (duh)
 
     case 2: //Alternate strobing of left and right wing
       if (StrobeState) {
-        for (int i = 0; i < NON_NAV_LEDS; i++) {
+        for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = CRGB::White;
           leftleds[i] = CRGB::Black;
         }
@@ -667,7 +674,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::Blue;}
         for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::White;}
       } else {
-        for (int i = 0; i < NON_NAV_LEDS; i++) {
+        for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = CRGB::Black;
           leftleds[i] = CRGB::White;
         }
@@ -686,7 +693,7 @@ void strobe(int style) { // Various strobe patterns (duh)
       switch(strobeStep) {
 
         case 0: // Right wing on for 50ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::White;
             leftleds[i] = CRGB::Black;
           }
@@ -694,7 +701,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         break;
           
         case 1: // Both wings off for 50ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::Black;
             leftleds[i] = CRGB::Black;
           }
@@ -702,7 +709,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         break;
           
         case 2: // Right wing on for 50ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::White;
             leftleds[i] = CRGB::Black;
           }
@@ -710,7 +717,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         break;
           
         case 3: // Both wings off for 500ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::Black;
             leftleds[i] = CRGB::Black;
           }
@@ -718,7 +725,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         break;
           
         case 4: // Left wing on for 50ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::Black;
             leftleds[i] = CRGB::White;
           }
@@ -726,7 +733,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         break;
           
         case 5: // Both wings off for 50ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::Black;
             leftleds[i] = CRGB::Black;
           }
@@ -734,7 +741,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         break;
           
         case 6: // Left wing on for 50ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::Black;
             leftleds[i] = CRGB::White;
           }
@@ -742,7 +749,7 @@ void strobe(int style) { // Various strobe patterns (duh)
         break;
           
         case 7: // Both wings off for 500ms
-          for (int i = 0; i < NON_NAV_LEDS; i++) {
+          for (int i = 0; i < wingNavPoint; i++) {
             rightleds[i] = CRGB::Black;
             leftleds[i] = CRGB::Black;
           }
@@ -788,7 +795,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
       /*  majorAlt = floor(currentAlt/100.0)*3;
       //Serial.println(majorAlt);
       minorAlt = int(currentAlt) % 100;
-      minorAlt = map(minorAlt, 0, 100, 0, NON_NAV_LEDS);
+      minorAlt = map(minorAlt, 0, 100, 0, wingNavPoint);
       
       for (int i=0; i < minorAlt; i++) {
         rightleds[i] = CRGB::White;
@@ -813,11 +820,11 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
       //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
       if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
       
-      for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i++) {
+      for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i++) {
         rightleds[i] = CRGB::White;
         leftleds[i] = CRGB::White;
       }
-      for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, NON_NAV_LEDS); i < NON_NAV_LEDS; i++) {
+      for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i < wingNavPoint; i++) {
         rightleds[i] = CRGB::Black;
         leftleds[i] = CRGB::Black;
       }
@@ -872,7 +879,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 //      versus treating each section (nose, fuse, wings, etc) individually.
 enum {SteadyDim, Dimming, Brightening};
 void twinkle1 () { // Random twinkle effect on all LEDs
-  static int pixelState[NON_NAV_LEDS];
+  static int pixelState[WING_LEDS];
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
@@ -881,7 +888,7 @@ void twinkle1 () { // Random twinkle effect on all LEDs
 
   if (prevShow != currentShow) { // Reset everything at start of show
     memset(pixelState, SteadyDim, sizeof(pixelState));
-    for (int i = 0; i < NON_NAV_LEDS; i++) {
+    for (int i = 0; i < wingNavPoint; i++) {
       rightleds[i] = colorMin;
       leftleds[i] = colorMin;
       if (i < NOSE_LEDS) {noseleds[i] = colorMin;}
@@ -890,7 +897,7 @@ void twinkle1 () { // Random twinkle effect on all LEDs
     }
   }
 
-  for (int i = 0; i < NON_NAV_LEDS; i++) {
+  for (int i = 0; i < wingNavPoint; i++) {
     if (pixelState[i] == SteadyDim) {
       if (random8() < twinkleChance) {
         pixelState[i] = Brightening;
@@ -946,7 +953,7 @@ void programInit(char progState) {
   static bool StrobeState = true;
   for (int j = 0; j <= 10; j++) {
       if (StrobeState) {
-        for (int i = 0; i < NON_NAV_LEDS; i++) {
+        for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = color;
           leftleds[i] = color;
         }
@@ -956,7 +963,7 @@ void programInit(char progState) {
         digitalWrite(LED_BUILTIN, HIGH);
         StrobeState = false;
       } else {
-        for (int i = 0; i < NON_NAV_LEDS; i++) {
+        for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = CRGB::Black;
           leftleds[i] = CRGB::Black;
         }
