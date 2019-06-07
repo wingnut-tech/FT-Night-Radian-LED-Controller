@@ -374,9 +374,9 @@ void loop() {
       prevMillis = currentMillis;
       stepShow();
     }*/
-    
+
     // Are we entering program mode?
-    if (digitalRead(PROGRAM_CYCLE_BTN) == LOW && programMode == false) { // Is the Program button pressed?
+    if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
       //Serial.println(programModeCounter);
       if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
@@ -384,6 +384,13 @@ void loop() {
         programModeCounter = 0;
         Serial.println("Entering program mode");
         programInit('w'); //strobe the leds to indicate entering program mode
+      }
+    } else if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) {
+      programModeCounter = programModeCounter + (currentMillis - progMillis);
+      if (programModeCounter > 5000) {
+        config.navlights = !config.navlights;
+        saveConfig();
+        programModeCounter = 0;
       }
     } else {
       programModeCounter = 0;
