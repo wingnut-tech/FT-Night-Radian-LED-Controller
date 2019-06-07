@@ -607,7 +607,7 @@ void chase() { // White segment that chases through the wings
   interval = 30;
 }
 
-void setNavLeds(CRGB rcolor, CRGB lcolor) { // helper function for the nav lights
+void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helper function for the nav lights
   for (int i = wingNavPoint; i < WING_LEDS; i++) {
     rightleds[i] = rcolor;
     leftleds[i] = lcolor;
