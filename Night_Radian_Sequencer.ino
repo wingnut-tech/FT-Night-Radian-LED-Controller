@@ -382,10 +382,11 @@ void loop() {
 //              |_|                               
 
 void stepShow() { // the main menu of different shows
+  int switchShow;
   if (programMode) {
-    int switchShow = currentShow;
+    switchShow = currentShow;
   } else {
-    int switchShow = activeShowNumbers[currentShow];
+    switchShow = activeShowNumbers[currentShow];
   }
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
     case 0: blank(); //all off
