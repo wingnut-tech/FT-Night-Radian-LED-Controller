@@ -60,6 +60,7 @@ int currentShow = 0; // which LED show are we currently running
 int prevShow = 0; // did the LED show change
 int wingtipStrobeCount = 0;
 unsigned long prevMillis = 0;
+unsigned long prevNavMillis = 0;
 unsigned long progMillis = 0;
 unsigned long prevStrobeMillis = 0;
 
@@ -306,9 +307,10 @@ void loop() {
     stepShow();
   }
 
-  if (currentMillis - prevMillis > 30) {
+  if (currentMillis - prevNavMillis > 30) {
+    prevNavMillis = currentMillis;
     if (config.navlights) { // navlights if enabled
-      strobe(0);
+      navLights();
     }
   }
 
@@ -405,8 +407,6 @@ int switchShow;
     switchShow = activeShowNumbers[currentShow];
   }
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
-    case -1: strobe(1); // programMode strobe() preview. Should only get this case if we're in program mode.
-            break;
     case 0: blank(); //all off
             break;
     case 1: colorWave1(10);//regular rainbow
@@ -600,45 +600,46 @@ void chase() { // White segment that chases through the wings
   interval = 30;
 }
 
-void setNavLeds(CRGB rcolor, CRGB lcolor) {
+void setNavLeds(CRGB rcolor, CRGB lcolor) { // helper function for the nav lights
   for (int i = wingNavPoint; i < WING_LEDS; i++) {
     rightleds[i] = rcolor;
     leftleds[i] = lcolor;
   }
 }
 
+void navLights() { // persistent nav lights
+  static int navStrobeState = 0;
+  switch(navStrobeState) {
+    case 0:
+      // red/green
+      setNavLeds(CRGB::Red, CRGB::Green);
+      break;
+    case 50:
+      // strobe 1
+      setNavLeds(CRGB::White, CRGB::White);
+      break;
+    case 52:
+      // back to red/green
+      setNavLeds(CRGB::Red, CRGB::Green);
+      break;
+    case 54:
+      // strobe 2
+      setNavLeds(CRGB::White, CRGB::White);
+      break;
+    case 56:
+      // red/green again
+      setNavLeds(CRGB::Red, CRGB::Green);
+      navStrobeState = 0;
+      break;
+  }
+  navStrobeState++;
+}
+
 void strobe(int style) { // Various strobe patterns (duh)
   static bool StrobeState = true;
-  static int strobeStepCounter = 0;
   if (prevShow != currentShow) {blank();}
 
   switch(style) {
-
-    case 0: // new realistic strobing using the new timing system?
-      switch(strobeStepCounter) {
-        case 0:
-          // red/green
-          setNavLeds(CRGB::Red, CRGB::Green);
-          break;
-        case 50:
-          // strobe 1
-          setNavLeds(CRGB::White, CRGB::White);
-          break;
-        case 52:
-          // back to red/green
-          setNavLeds(CRGB::Red, CRGB::Green);
-          break;
-        case 54:
-          // strobe 2
-          setNavLeds(CRGB::White, CRGB::White);
-          break;
-        case 56:
-          // red/green again
-          setNavLeds(CRGB::Red, CRGB::Green);
-          strobeStepCounter = 0;
-          break;
-      }
-      strobeStepCounter++;
 
     case 1: //Rapid strobing all LEDS in unison
       if (StrobeState) {
