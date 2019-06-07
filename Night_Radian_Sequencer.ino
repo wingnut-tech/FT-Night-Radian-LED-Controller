@@ -639,6 +639,7 @@ void navLights() { // persistent nav lights
       navStrobeState = 0;
       break;
   }
+  showStrip();
   navStrobeState++;
 }
 
