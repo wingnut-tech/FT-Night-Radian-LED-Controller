@@ -334,7 +334,7 @@ void loop() {
     } else {
       if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
         currentShow++;
-        if (currentShow > NUM_SHOWS) {currentShow = -1;} // -1 is strobe() preview
+        if (currentShow > NUM_SHOWS) {currentShow = 0;}
       }
       //programModeCounter = 0;
       if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
