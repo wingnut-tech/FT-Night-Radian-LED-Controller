@@ -756,7 +756,6 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 
 
 //TODO: need to test and make sure these new twinkle functions work correctly.
-//      once we know it's good, we can nuke the old commented code in twinkle()
 enum {SteadyDim, Dimming, Brightening};
 void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
   const CRGB colorDown = CRGB(1, 1, 1);
@@ -769,6 +768,9 @@ void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
     if (pixelState[i] == SteadyDim) {
       if (random8() < twinkleChance) {
         pixelState[i] = Brightening;
+      }
+      if (prevShow != currentShow) { // Reset all LEDs at start of show
+        ledArray[i] = colorMin;
       }
     }
 
@@ -797,7 +799,6 @@ void twinkle1 () { // Random twinkle effect on all LEDs
   static int pixelStateNose[NOSE_LEDS];
   static int pixelStateFuse[FUSE_LEDS];
   static int pixelStateTail[TAIL_LEDS];
-  const CRGB colorMin = CRGB(4, 4, 4);
 
   if (prevShow != currentShow) { // Reset everything at start of show
     memset(pixelStateRight, SteadyDim, sizeof(pixelStateRight));
@@ -805,57 +806,16 @@ void twinkle1 () { // Random twinkle effect on all LEDs
     memset(pixelStateNose, SteadyDim, sizeof(pixelStateNose));
     memset(pixelStateFuse, SteadyDim, sizeof(pixelStateFuse));
     memset(pixelStateTail, SteadyDim, sizeof(pixelStateTail));
-    for (int i = 0; i < NON_NAV_LEDS; i++) {
-      rightleds[i] = colorMin;
-      leftleds[i] = colorMin;
-      if (i < NOSE_LEDS) {noseleds[i] = colorMin;}
-      if (i < FUSE_LEDS) {fuseleds[i] = colorMin;}
-      if (i < TAIL_LEDS) {tailleds[i] = colorMin;}
-    }
   }
 
+  // TODO: will need to replace these instances of NON_NAV_LEDS with the
+  //       new wingNavPoint variable from the navlights branch, once it all gets merged together:
   doTwinkle1(rightleds, pixelStateRight, NON_NAV_LEDS);
   doTwinkle1(leftleds,  pixelStateLeft, NON_NAV_LEDS);
   doTwinkle1(noseleds,  pixelStateNose, NOSE_LEDS);
   doTwinkle1(fuseleds,  pixelStateFuse, FUSE_LEDS);
   doTwinkle1(tailleds,  pixelStateTail, TAIL_LEDS);
 
-  // for (int i = 0; i < NON_NAV_LEDS; i++) {
-  //   if (pixelState[i] == SteadyDim) {
-  //     if (random8() < twinkleChance) {
-  //       pixelState[i] = Brightening;
-  //     }
-  //   }
-
-  //   if (pixelState[i] == Brightening) {
-  //     if (rightleds[i] >= colorMax) {
-  //       pixelState[i] = Dimming;
-  //     } else {
-  //       rightleds[i] += colorUp;
-  //       leftleds[i] += colorUp;
-  //       if (i < NOSE_LEDS) {noseleds[i] += colorUp;}
-  //       if (i < FUSE_LEDS) {fuseleds[i] += colorUp;}
-  //       if (i < TAIL_LEDS) {tailleds[i] += colorUp;}
-
-  //     }
-  //   }
-  //   if (pixelState[i] == Dimming) {
-  //     if (rightleds[i] <= colorMin) {
-  //       rightleds[i] = colorMin;
-  //       leftleds[i] = colorMin;
-  //       noseleds[i] = colorMin;
-  //       fuseleds[i] = colorMin;
-  //       tailleds[i] = colorMin;
-  //       pixelState[i] = SteadyDim;
-  //     } else {
-  //       rightleds[i] -= colorDown;
-  //       leftleds[i] -= colorDown;
-  //       if (i < NOSE_LEDS) {noseleds[i] += colorDown;}
-  //       if (i < FUSE_LEDS) {fuseleds[i] += colorDown;}
-  //       if (i < TAIL_LEDS) {tailleds[i] += colorDown;}
-  //     }
-  //   }
-  // }
   interval = 10;
   showStrip();
 }
