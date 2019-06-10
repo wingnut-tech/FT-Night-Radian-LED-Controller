@@ -758,7 +758,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 //TODO: need to test and make sure these new twinkle functions work correctly.
 //      once we know it's good, we can nuke the old commented code in twinkle()
 enum {SteadyDim, Dimming, Brightening};
-void doTwinkle1(CRGB *ledArray, int *pixelState, int size) {
+void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
@@ -766,26 +766,26 @@ void doTwinkle1(CRGB *ledArray, int *pixelState, int size) {
   const int twinkleChance = 1;
 
   for (int i = 0; i < size; i++) {
-    if (*pixelState[i] == SteadyDim) {
+    if (pixelState[i] == SteadyDim) {
       if (random8() < twinkleChance) {
-        *pixelstate[i] = Brightening;
+        pixelState[i] = Brightening;
       }
     }
 
-    if (*pixelState[i] == Brightening) {
-      if (*ledArray[i] >= colorMax) {
-        *pixelState[i] = Dimming;
+    if (pixelState[i] == Brightening) {
+      if (ledArray[i] >= colorMax) {
+        pixelState[i] = Dimming;
       } else {
-        *ledArray[i] += colorUp;
+        ledArray[i] += colorUp;
       }
     }
 
-    if (*pixelState[i] == Dimming) {
-      if (*ledArray[i] <= colorMin) {
-        *ledArray[i] = colorMin;
-        *pixelState[i] = SteadyDim;
+    if (pixelState[i] == Dimming) {
+      if (ledArray[i] <= colorMin) {
+        ledArray[i] = colorMin;
+        pixelState[i] = SteadyDim;
       } else {
-        *ledArray[i] -= colorDown;
+        ledArray[i] -= colorDown;
       }
     }
   }
@@ -800,7 +800,11 @@ void twinkle1 () { // Random twinkle effect on all LEDs
   const CRGB colorMin = CRGB(4, 4, 4);
 
   if (prevShow != currentShow) { // Reset everything at start of show
-    memset(pixelState, SteadyDim, sizeof(pixelState));
+    memset(pixelStateRight, SteadyDim, sizeof(pixelStateRight));
+    memset(pixelStateLeft, SteadyDim, sizeof(pixelStateLeft));
+    memset(pixelStateNose, SteadyDim, sizeof(pixelStateNose));
+    memset(pixelStateFuse, SteadyDim, sizeof(pixelStateFuse));
+    memset(pixelStateTail, SteadyDim, sizeof(pixelStateTail));
     for (int i = 0; i < NON_NAV_LEDS; i++) {
       rightleds[i] = colorMin;
       leftleds[i] = colorMin;
@@ -810,11 +814,11 @@ void twinkle1 () { // Random twinkle effect on all LEDs
     }
   }
 
-  doTwinkle1(&rightleds, &pixelStateRight, NON_NAV_LEDS);
-  doTwinkle1(&leftleds, &pixelStateLeft, NON_NAV_LEDS);
-  doTwinkle1(&noseleds, &pixelStateNose, NOSE_LEDS);
-  doTwinkle1(&fuseleds, &pixelStateFuse, FUSE_LEDS);
-  doTwinkle1(&tailleds, &pixelStateTail, TAIL_LEDS);
+  doTwinkle1(rightleds, pixelStateRight, NON_NAV_LEDS);
+  doTwinkle1(leftleds,  pixelStateLeft, NON_NAV_LEDS);
+  doTwinkle1(noseleds,  pixelStateNose, NOSE_LEDS);
+  doTwinkle1(fuseleds,  pixelStateFuse, FUSE_LEDS);
+  doTwinkle1(tailleds,  pixelStateTail, TAIL_LEDS);
 
   // for (int i = 0; i < NON_NAV_LEDS; i++) {
   //   if (pixelState[i] == SteadyDim) {
