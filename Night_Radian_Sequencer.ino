@@ -157,9 +157,15 @@ void saveConfig() { // saves current config to EEPROM
 void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}
   numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
   for (uint8_t i = 0; i < NUM_SHOWS; i++) {
+    Serial.print("Show ");
+    Serial.print(i);
+    Serial.print(": ");
     if (config.enabledShows[i]) {
+      Serial.println("enabled.");
       activeShowNumbers[numActiveShows] = i;
       numActiveShows++;
+    } else {
+      Serial.println("disabled.");
     }
   }
 }
@@ -231,7 +237,7 @@ void loop() {
   static int wingtipStrobeDelay = 50;
   static bool wingtipStrobeState = false;
   static int programModeCounter = 0;
-  static int programButtonPressed = 0;
+  static int enableCounter = 0;
   static unsigned long currentMillis = millis();
   static int progEnableBtnHist[] = {0,0,0};
 
@@ -316,19 +322,22 @@ void loop() {
     } else {
       if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
         currentShow++;
-        if (currentShow > NUM_SHOWS) {currentShow = 0;}
+        if (currentShow == NUM_SHOWS) {currentShow = 0;}
       }
       //programModeCounter = 0;
-      if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
-        programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-        //Serial.println(programModeCounter);
-        if (programModeCounter > 0 && programModeCounter < 1000) { // Has the button been held down for 5 seconds?
-          //toggle the state of the current program, currState = !currState
-          config.enabledShows[currentShow] = !config.enabledShows[currentShow];
-          Serial.println("changing program enabled state");
-        }
       programModeCounter = 0;
+    }
+    
+    if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
+      enableCounter = enableCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
+      //Serial.println(programModeCounter);
+    } else {
+      if (enableCounter > 0 && enableCounter < 1000) { // Has the button been held down for 5 seconds?
+        //toggle the state of the current program, currState = !currState
+        config.enabledShows[currentShow] = !config.enabledShows[currentShow];
+        Serial.println("changing program enabled state");
       }
+      enableCounter = 0;
     }
     progMillis = currentMillis;
 
