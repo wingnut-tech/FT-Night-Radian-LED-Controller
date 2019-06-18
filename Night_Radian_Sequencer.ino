@@ -19,7 +19,6 @@
 #define WINGTIP_STROBE_LOC 27
 #define PROGRAM_CYCLE_BTN 6
 #define PROGRAM_ENABLE_BTN 7
-#define PROGRAM_PARAM_BTN 4
 
 // define the pins that the LED strings are connected to
 #define TAIL_PIN 8
@@ -29,6 +28,7 @@
 #define RIGHT_PIN 12
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
+#define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
 #define NUM_SHOWS 8
 
 #define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
@@ -208,8 +208,8 @@ void setup() {
   }
   pinMode(PROGRAM_CYCLE_BTN, INPUT_PULLUP);
   pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
-  pinMode(PROGRAM_PARAM_BTN, INPUT_PULLUP);
   pinMode(RC_PIN1, INPUT);
+  pinMode(RC_PIN2, INPUT);
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, FUSE_PIN>(fuseleds, FUSE_LEDS);
