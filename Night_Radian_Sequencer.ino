@@ -361,9 +361,10 @@ void loop() {
     if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
     currentModeIn = floor(currentCh1/100);
+    // TODO: do we need this currentModeIn stuff? I think this is causing the show to get stuck wrong when exiting program mode.
     if (currentModeIn != prevModeIn) {
       currentShow = map(currentModeIn, 9, 19, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
-      // currentShow = 1;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
+      // currentShow = 8;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
       
       prevModeIn = currentModeIn;
@@ -403,12 +404,26 @@ void loop() {
 //              |_|                               
 
 void stepShow() { // the main menu of different shows
+  if (currentShow != prevShow) {
+    Serial.print("Current Show: ");
+    Serial.println(currentShow);
+    if (programMode) {
+      //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
+      if (config.enabledShows[currentShow]) { // this should now check EEPROM config
+        programInit('g'); //flash all LEDs green to indicate current show is enabled
+      } else {
+        programInit('r'); //flash all LEDs red to indicate current show is disabled
+      }
+    }
+  }
+
   int switchShow;
   if (programMode) {
     switchShow = currentShow;
   } else {
     switchShow = activeShowNumbers[currentShow];
   }
+
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
     case 0: blank(); //all off
             break;
@@ -434,19 +449,6 @@ void stepShow() { // the main menu of different shows
             break;
     case 8: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
-  }
-  if (currentShow != prevShow) {
-    Serial.print("Current Show: ");
-    Serial.println(currentShow);
-    if (programMode) {
-      
-      //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
-      if (config.enabledShows[currentShow]) { // this should now check EEPROM config
-        programInit('g'); //flash all LEDs green to indicate current show is enabled
-      } else {
-        programInit('r'); //flash all LEDs red to indicate current show is disabled
-      }
-    }
   }
   prevShow = currentShow;
 }
@@ -971,7 +973,7 @@ void programInit(char progState) {
       break;
   }
   static bool StrobeState = true;
-  for (int j = 0; j <= 10; j++) {
+  for (int j = 0; j < 10; j++) {
       if (StrobeState) {
         for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = color;
