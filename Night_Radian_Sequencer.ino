@@ -29,7 +29,7 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
-#define NUM_SHOWS 8
+#define NUM_SHOWS 9
 
 #define CONFIG_VERSION 0xAA02 // EEPROM config version (increment this any time the Config struct changes)
 #define CONFIG_START 0 // starting EEPROM address for our config
@@ -326,7 +326,7 @@ void loop() {
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
       //Serial.println(programModeCounter);
-      if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
+      if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
         programMode = false;
         Serial.println("Exiting program mode");
         // store current program values into eeprom
@@ -345,10 +345,10 @@ void loop() {
     if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
       enableCounter = enableCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
     } else {
-      if (enableCounter > 0 && enableCounter < 1000) { // Has the button been held down for 5 seconds?
+      if (enableCounter > 0 && enableCounter < 1000) { // momentary press to toggle the current show
         //toggle the state of the current program, currState = !currState
         config.enabledShows[currentShow] = !config.enabledShows[currentShow];
-        Serial.println("changing program enabled state");
+        programInit(config.enabledShows[currentShow]);
       }
       enableCounter = 0;
     }
@@ -356,8 +356,8 @@ void loop() {
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
     // Read in the length of the signal in microseconds
     prevCh1 = currentCh1;
-    currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
-    // currentCh1 = 950;
+    // currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
+    currentCh1 = 900;
     if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
     currentModeIn = floor(currentCh1/100);
@@ -373,15 +373,17 @@ void loop() {
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
       //Serial.println(programModeCounter);
-      if (programModeCounter > 5000) { // Has the button been held down for 5 seconds?
+      if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
         programMode = true;
         programModeCounter = 0;
         Serial.println("Entering program mode");
         programInit('w'); //strobe the leds to indicate entering program mode
+        currentShow = 0;
+        programInit(config.enabledShows[currentShow]);
       }
     } else if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) {
       programModeCounter = programModeCounter + (currentMillis - progMillis);
-      if (programModeCounter > 5000) {
+      if (programModeCounter > 3000) {
         config.navlights = !config.navlights;
         saveConfig();
         programModeCounter = 0;
@@ -416,19 +418,21 @@ void stepShow() { // the main menu of different shows
             break;
     case 3: setColor(pure_white);
             break;
+    case 4: twinkle1(); //twinkle effect
+            break;
   /*    case 4: setColor(variometer); //Realistic double strobe alternating between wings
             break;
     case 5: setColor(orange_yellow); //Realistic landing-light style alternating between wings
             break;
     case 6: setColor(warm_white); // unrealistic rapid strobe of all non-nav leds
             break;*/
-    case 4: strobe(3); //Realistic double strobe alternating between wings
+    case 5: strobe(3); //Realistic double strobe alternating between wings
             break;
-    case 5: strobe(2); //Realistic landing-light style alternating between wings
+    case 6: strobe(2); //Realistic landing-light style alternating between wings
             break;
-    case 6: strobe(1); // unrealistic rapid strobe of all non-nav leds
+    case 7: strobe(1); // unrealistic rapid strobe of all non-nav leds
             break;
-    case 7: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
+    case 8: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
   }
   if (currentShow != prevShow) {
@@ -769,6 +773,9 @@ void strobe(int style) { // Various strobe patterns (duh)
   }
 }
 
+// TODO: Because of the delays, this function causes the whole system to slow down (including navlights).
+//       Need to maybe re-write it to use intervals. If so, will need to do some checking for when to try startMeasurement().
+//       Also, this show seems to crash the whole system when not connected to the serial monitor (at least in program mode)
 void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   static int majorAlt;
   static int minorAlt;
@@ -916,8 +923,8 @@ void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
 }
 
 void twinkle1 () { // Random twinkle effect on all LEDs
-  static int pixelStateRight[NON_NAV_LEDS];
-  static int pixelStateLeft[NON_NAV_LEDS];
+  static int pixelStateRight[WING_LEDS];
+  static int pixelStateLeft[WING_LEDS];
   static int pixelStateNose[NOSE_LEDS];
   static int pixelStateFuse[FUSE_LEDS];
   static int pixelStateTail[TAIL_LEDS];
@@ -930,16 +937,24 @@ void twinkle1 () { // Random twinkle effect on all LEDs
     memset(pixelStateTail, SteadyDim, sizeof(pixelStateTail));
   }
 
-  // TODO: will need to replace these instances of NON_NAV_LEDS with the
-  //       new wingNavPoint variable from the navlights branch, once it all gets merged together:
-  doTwinkle1(rightleds, pixelStateRight, NON_NAV_LEDS);
-  doTwinkle1(leftleds,  pixelStateLeft, NON_NAV_LEDS);
+  doTwinkle1(rightleds, pixelStateRight, wingNavPoint);
+  doTwinkle1(leftleds,  pixelStateLeft, wingNavPoint);
   doTwinkle1(noseleds,  pixelStateNose, NOSE_LEDS);
   doTwinkle1(fuseleds,  pixelStateFuse, FUSE_LEDS);
   doTwinkle1(tailleds,  pixelStateTail, TAIL_LEDS);
 
   interval = 10;
   showStrip();
+}
+
+void programInit(bool progState) {
+  if (progState) {
+    Serial.println("enabled.");
+    programInit('g');
+  } else {
+    Serial.println("disabled.");
+    programInit('r');
+  }
 }
 
 void programInit(char progState) {
