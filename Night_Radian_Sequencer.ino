@@ -31,7 +31,7 @@
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
 #define NUM_SHOWS 9
 
-#define CONFIG_VERSION 0xAA02 // EEPROM config version (increment this any time the Config struct changes)
+#define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
 #define CONFIG_START 0 // starting EEPROM address for our config
 
 int wingNavPoint = NON_NAV_LEDS;
@@ -332,6 +332,7 @@ void loop() {
         // store current program values into eeprom
         saveConfig();
         programModeCounter = 0;
+        prevModeIn = -1;
         programInit('w'); //strobe the leds to indicate leaving program mode
       }
     } else {
