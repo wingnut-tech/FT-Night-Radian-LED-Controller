@@ -31,7 +31,7 @@
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
 #define NUM_SHOWS 8
 
-#define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
+#define CONFIG_VERSION 0xAA02 // EEPROM config version (increment this any time the Config struct changes)
 #define CONFIG_START 0 // starting EEPROM address for our config
 
 int wingNavPoint = NON_NAV_LEDS;
@@ -311,23 +311,17 @@ void loop() {
   currentMillis = millis();
   if (currentMillis - prevMillis > interval) {
     prevMillis = currentMillis;
-    // place this statement inside the loop for enabling/disabling a show
-    //showState(); // indicate whether the current show is enabled or disabled
     stepShow();
   }
 
-  if (currentMillis - prevNavMillis > 30) {
-    prevNavMillis = currentMillis;
-    if (config.navlights) { // navlights if enabled
-      navLights();
+  if (config.navlights) { // navlights if enabled
+    if (currentMillis - prevNavMillis > 30) {
+      prevNavMillis = currentMillis;
+        navLights();
     }
   }
 
   if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
-    /*  On first run of program mode, read values stored in eeprom into variable array. Then loop through the programs, indicating
-     *  enabled/disabled status, looking for enable/disable command, and if enabled, look for parameter command. */
-    
-  
     // Are we exiting program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
@@ -345,13 +339,11 @@ void loop() {
         currentShow++;
         if (currentShow == NUM_SHOWS) {currentShow = 0;}
       }
-      //programModeCounter = 0;
       programModeCounter = 0;
     }
     
     if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
       enableCounter = enableCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-      //Serial.println(programModeCounter);
     } else {
       if (enableCounter > 0 && enableCounter < 1000) { // Has the button been held down for 5 seconds?
         //toggle the state of the current program, currState = !currState
@@ -360,33 +352,23 @@ void loop() {
       }
       enableCounter = 0;
     }
-    progMillis = currentMillis;
-
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
-      
     // Read in the length of the signal in microseconds
     prevCh1 = currentCh1;
     currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
-    //currentCh1 = 2000;
+    // currentCh1 = 950;
     if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
     currentModeIn = floor(currentCh1/100);
     if (currentModeIn != prevModeIn) {
       currentShow = map(currentModeIn, 9, 19, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
-      //currentShow = 7;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
+      // currentShow = 1;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
       
       prevModeIn = currentModeIn;
     }
     
-    // The timing control for calling each "frame" of the different animations
-    /*  currentMillis = millis();
-    if (currentMillis - prevMillis > interval) {
-      prevMillis = currentMillis;
-      stepShow();
-    }*/
-
     // Are we entering program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
@@ -407,8 +389,8 @@ void loop() {
     } else {
       programModeCounter = 0;
     }
-    progMillis = currentMillis;
   }
+  progMillis = currentMillis;
 }
 
 //       _                   _                    
