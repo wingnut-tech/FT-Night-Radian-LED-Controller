@@ -782,14 +782,21 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   static double prevAlt;
   //static int metric;
   static int vSpeed;
+  static bool needMeasurement = true;
   //static CRGBPalette16 varioPalette = variometer;
 
   double T, P, A, currentAlt;
-  char result = bmp.startMeasurment();
+
+  interval = 100;
+
+  if (needMeasurement) {
+    char result = bmp.startMeasurment();
+    if (result != 0) {
+      needMeasurement = false;
+    }
+    return;
+  } else {
   //metric = metricConversion;  
- 
-  if (result != 0) {
-    delay(result);
     result = bmp.getTemperatureAndPressure(T, P);
     
     if (result != 0) {
@@ -846,6 +853,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
       }
       
     }
+    needMeasurement = true;
   }
   //map vertical speed value to gradient palette
   int vspeedMap;
@@ -861,7 +869,6 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
     tailleds[i] = ColorFromPalette(palette, vspeedMap);
   }
   prevAlt = currentAlt;
-  interval = 100;
   showStrip();
     //Serial.write(27);       // ESC command
     //Serial.print("[2J");    // clear screen command
