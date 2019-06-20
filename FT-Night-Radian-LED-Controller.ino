@@ -175,7 +175,7 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
     }
   }
   Serial.print("Navlights: ");
-  if (config.navlights) { // TODO: for some reason this section was saying "on" no matter what
+  if (config.navlights) {
     wingNavPoint = NON_NAV_LEDS;
     Serial.println("on.");
   } else {
