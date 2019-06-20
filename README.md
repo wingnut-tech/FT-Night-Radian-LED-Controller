@@ -5,6 +5,6 @@ FastLED library from <https://github.com/FastLED/FastLED>
 
 When cloning, use:
 ```
-git clone --recurse-submodules https://github.com/mapleacrefarm/FT_Night_Radian_LED_Controller.git
+git clone --recurse-submodules https://github.com/mapleacrefarm/FT-Night-Radian-LED-Controller.git
 ```
 to clone the dependencies along with the project.
