@@ -773,9 +773,7 @@ void strobe(int style) { // Various strobe patterns (duh)
   }
 }
 
-// TODO: Because of the delays, this function causes the whole system to slow down (including navlights).
-//       Need to maybe re-write it to use intervals. If so, will need to do some checking for when to try startMeasurement().
-//       Also, this show seems to crash the whole system when not connected to the serial monitor (at least in program mode)
+// TODO: Do some actual testing of this function, now that I re-wrote it. Seems to work fine on the bench.
 void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   static int majorAlt;
   static int minorAlt;
@@ -783,6 +781,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   //static int metric;
   static int vSpeed;
   static bool needMeasurement = true;
+  char result;
   //static CRGBPalette16 varioPalette = variometer;
 
   double T, P, A, currentAlt;
@@ -790,7 +789,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   interval = 100;
 
   if (needMeasurement) {
-    char result = bmp.startMeasurment();
+    result = bmp.startMeasurment();
     if (result != 0) {
       needMeasurement = false;
     }
