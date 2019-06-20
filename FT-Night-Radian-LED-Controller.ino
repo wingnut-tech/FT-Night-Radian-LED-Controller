@@ -362,7 +362,6 @@ void loop() {
     if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
 
     currentModeIn = floor(currentCh1/100);
-    // TODO: do we need this currentModeIn stuff? I think this is causing the show to get stuck wrong when exiting program mode.
     if (currentModeIn != prevModeIn) {
       currentShow = map(currentModeIn, 9, 19, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
       // currentShow = 8;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
@@ -510,8 +509,6 @@ CRGB LetterToColor (char letter) { // Convert the letters in the static patterns
   return color;
 }
 
-//TODO: test and make sure this new LetterToColor function actually works.
-//      If it does, we can nuke all of this redundant commented code.
 void setPattern (char pattern[]) {
   for (int i = 0; i < wingNavPoint; i++) {
     rightleds[i] = LetterToColor(pattern[i]);
@@ -886,8 +883,6 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
     Serial.println(vspeedMap);*/
 }
 
-
-//TODO: need to test and make sure these new twinkle functions work correctly.
 enum {SteadyDim, Dimming, Brightening};
 void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
   const CRGB colorDown = CRGB(1, 1, 1);
