@@ -12,7 +12,7 @@
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
 //#define TMP_BRIGHTNESS 55
-#define VSPEED_MAP 5
+#define VSPEED_MAP 100
 #define MAX_ALTIMETER 400
 #define WINGTIP_STROBE_LOC 27
 #define PROGRAM_CYCLE_BTN 6
@@ -40,7 +40,6 @@ uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 double metricConversion = 3.3;
 float basePressure;
 double fakeAlt = 0;
-double avgVSpeed[] = {0,0,0,0};
 
 int currentCh1 = 0;  // Receiver Channel PPM value
 int prevCh1 = 0; // determine if the Receiver signal changed
@@ -763,20 +762,18 @@ void strobe(int style) { // Various strobe patterns (duh)
 
 // TODO: Do a full flight test to make sure this function still works properly
 void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
-  static int majorAlt;
-  static int minorAlt;
+  // static int majorAlt;
+  // static int minorAlt;
   static double prevAlt;
-  static int vSpeed;
+  static int avgVSpeed[] = {0,0,0,0};
 
+  int vSpeed;
   double currentAlt;
 
   currentAlt = bmp.readAltitude(basePressure)*metricConversion;
   //if (currentAlt < 0) {currentAlt = 0;}
   
   if (fake != 0) {currentAlt = fake;}
-
-  Serial.print("Current relative altitude: ");
-  Serial.println(currentAlt);
 
   /*  majorAlt = floor(currentAlt/100.0)*3;
   //Serial.println(majorAlt);
@@ -825,19 +822,26 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   int vspeedMap;
   avgVSpeed[0]=avgVSpeed[1];
   avgVSpeed[1]=avgVSpeed[2];
-  avgVSpeed[2]=(currentAlt-prevAlt);
+  avgVSpeed[2]=(currentAlt-prevAlt)*100;
   vSpeed = (avgVSpeed[0]+avgVSpeed[1]+avgVSpeed[2])/3;
-  //vSpeed = (currentAlt - prevAlt);
-  if (vSpeed > VSPEED_MAP) {vSpeed = VSPEED_MAP;}
-  if (vSpeed < (VSPEED_MAP*-1)) {vSpeed = (VSPEED_MAP*-1);}
-  vspeedMap = map(vSpeed, (VSPEED_MAP*-1), VSPEED_MAP, 0, 240);
-  for (int i; i < TAIL_LEDS; i++) {
+  vSpeed = constrain(vSpeed, -VSPEED_MAP, VSPEED_MAP);
+
+  vspeedMap = map(vSpeed, -VSPEED_MAP, VSPEED_MAP, 0, 240);
+
+  for (int i = 0; i < TAIL_LEDS; i++) {
     tailleds[i] = ColorFromPalette(palette, vspeedMap);
   }
+
+  Serial.print("Current relative altitude: ");
+  Serial.print(currentAlt);
+  Serial.print("   VSpeed:");
+  Serial.print(vSpeed);
+  Serial.print("   VSpeedMap:");
+  Serial.println(vspeedMap);
   
   prevAlt = currentAlt;
 
-  interval = 100;
+  interval = 250;
   showStrip();
     //Serial.write(27);       // ESC command
     //Serial.print("[2J");    // clear screen command
