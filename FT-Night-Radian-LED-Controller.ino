@@ -1,10 +1,8 @@
-// #include <FastLED.h>
-// #include <BMP280.h>
-#include "src/FastLED/FastLED.h"
-#include "src/BMP280-Arduino-Library/BMP280.h"
+// #include "src/FastLED/FastLED.h"
+// #include "src/Adafruit_BMP280_Library/Adafruit_BMP280.h"
+#include <FastLED.h>
+#include <Adafruit_BMP280.h>
 #include <EEPROM.h>
-//#include <Adafruit_BMP280.h>
-#define P0 1021.97
 // define number of LEDs in specific strings
 #define WING_LEDS 31
 #define NON_NAV_LEDS 20
@@ -40,7 +38,7 @@ uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show numb
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
 double metricConversion = 3.3;
-double baseAlt;
+float basePressure;
 double fakeAlt = 0;
 double avgVSpeed[] = {0,0,0,0};
 
@@ -65,8 +63,8 @@ unsigned long progMillis = 0;
 unsigned long prevStrobeMillis = 0;
 
 int interval;
-BMP280 bmp;
-float relativeAlt;
+
+Adafruit_BMP280 bmp;
 
 
 //       _        _   _                    _   _                       
@@ -207,25 +205,15 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 
-  bmp.begin(); // initialize the altitude pressure sensor
-  bmp.setOversampling(4);
-  double T, P, A, currentAlt;
-  char result = bmp.startMeasurment();
-  if (result != 0) {
-    delay(result);
-    result = bmp.getTemperatureAndPressure(T, P);
-    if (result != 0) {
-      A = bmp.altitude(P, P0);
-      baseAlt = int(A * metricConversion);
-      //baseAlt = 0; // shows ASL for testing, instead of AGL
-      //Serial.print("Base Alt: ");
-      //Serial.println(baseAlt);
-    } else {
-      Serial.println("No T&P");
-    }
-  } else {
-    Serial.println("No startMeasurement");
-  }
+  bmp.begin(0x76); // initialize the altitude pressure sensor
+  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                  Adafruit_BMP280::SAMPLING_X4,     /* Pressure oversampling */
+                  Adafruit_BMP280::FILTER_X4,       /* Filtering. */
+                  Adafruit_BMP280::STANDBY_MS_125); /* Standby time. */
+
+  basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
+
   pinMode(PROGRAM_CYCLE_BTN, INPUT_PULLUP);
   pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
   pinMode(RC_PIN1, INPUT);
@@ -773,87 +761,66 @@ void strobe(int style) { // Various strobe patterns (duh)
   }
 }
 
-// TODO: Do some actual testing of this function, now that I re-wrote it. Seems to work fine on the bench.
+// TODO: Do a full flight test to make sure this function still works properly
 void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   static int majorAlt;
   static int minorAlt;
   static double prevAlt;
-  //static int metric;
   static int vSpeed;
-  static bool needMeasurement = true;
-  char result;
-  //static CRGBPalette16 varioPalette = variometer;
 
-  double T, P, A, currentAlt;
+  double currentAlt;
 
-  interval = 100;
+  currentAlt = bmp.readAltitude(basePressure)*metricConversion;
+  //if (currentAlt < 0) {currentAlt = 0;}
+  
+  if (fake != 0) {currentAlt = fake;}
 
-  if (needMeasurement) {
-    result = bmp.startMeasurment();
-    if (result != 0) {
-      needMeasurement = false;
-    }
-    return;
-  } else {
-  //metric = metricConversion;  
-    result = bmp.getTemperatureAndPressure(T, P);
-    
-    if (result != 0) {
-      A = bmp.altitude(P, P0);
-      A = int(A * metricConversion);
-      Serial.print("Alt: ");
-      Serial.print(A);
-      currentAlt = (A - baseAlt); // subtract baseAlt from currentAlt to get AGL
-      //if (currentAlt < 0) {currentAlt = 0;}
-      
-      if (fake != 0) {currentAlt = fake;}
+  Serial.print("Current relative altitude: ");
+  Serial.println(currentAlt);
 
-      /*  majorAlt = floor(currentAlt/100.0)*3;
-      //Serial.println(majorAlt);
-      minorAlt = int(currentAlt) % 100;
-      minorAlt = map(minorAlt, 0, 100, 0, wingNavPoint);
-      
-      for (int i=0; i < minorAlt; i++) {
-        rightleds[i] = CRGB::White;
-        leftleds[i] = CRGB::White;
-      }
-      for (int i=minorAlt+1; i <= FUSE_LEDS; i++) {
-        rightleds[i] = CRGB::Black;
-        leftleds[i] = CRGB::Black;
-      }
-
-      for (int i=0; i < majorAlt; i++) {
-        fuseleds[i-2] = CRGB::White;
-        fuseleds[i-1] = CRGB::White;
-        fuseleds[i] = CRGB::White;
-      }
-      for (int i=majorAlt+1; i < FUSE_LEDS; i++) {
-        fuseleds[i-2] = CRGB::Black;
-        fuseleds[i-1] = CRGB::Black;
-        fuseleds[i] = CRGB::Black;
-      }*/
-
-      //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
-      if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
-      
-      for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i++) {
-        rightleds[i] = CRGB::White;
-        leftleds[i] = CRGB::White;
-      }
-      for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i < wingNavPoint; i++) {
-        rightleds[i] = CRGB::Black;
-        leftleds[i] = CRGB::Black;
-      }
-      for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
-        fuseleds[i] = CRGB::White;
-      }
-      for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
-        fuseleds[i] = CRGB::Black;
-      }
-      
-    }
-    needMeasurement = true;
+  /*  majorAlt = floor(currentAlt/100.0)*3;
+  //Serial.println(majorAlt);
+  minorAlt = int(currentAlt) % 100;
+  minorAlt = map(minorAlt, 0, 100, 0, wingNavPoint);
+  
+  for (int i=0; i < minorAlt; i++) {
+    rightleds[i] = CRGB::White;
+    leftleds[i] = CRGB::White;
   }
+  for (int i=minorAlt+1; i <= FUSE_LEDS; i++) {
+    rightleds[i] = CRGB::Black;
+    leftleds[i] = CRGB::Black;
+  }
+
+  for (int i=0; i < majorAlt; i++) {
+    fuseleds[i-2] = CRGB::White;
+    fuseleds[i-1] = CRGB::White;
+    fuseleds[i] = CRGB::White;
+  }
+  for (int i=majorAlt+1; i < FUSE_LEDS; i++) {
+    fuseleds[i-2] = CRGB::Black;
+    fuseleds[i-1] = CRGB::Black;
+    fuseleds[i] = CRGB::Black;
+  }*/
+
+  //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
+  if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
+  
+  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i++) {
+    rightleds[i] = CRGB::White;
+    leftleds[i] = CRGB::White;
+  }
+  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i < wingNavPoint; i++) {
+    rightleds[i] = CRGB::Black;
+    leftleds[i] = CRGB::Black;
+  }
+  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
+    fuseleds[i] = CRGB::White;
+  }
+  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
+    fuseleds[i] = CRGB::Black;
+  }
+
   //map vertical speed value to gradient palette
   int vspeedMap;
   avgVSpeed[0]=avgVSpeed[1];
@@ -867,7 +834,10 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   for (int i; i < TAIL_LEDS; i++) {
     tailleds[i] = ColorFromPalette(palette, vspeedMap);
   }
+  
   prevAlt = currentAlt;
+
+  interval = 100;
   showStrip();
     //Serial.write(27);       // ESC command
     //Serial.print("[2J");    // clear screen command
