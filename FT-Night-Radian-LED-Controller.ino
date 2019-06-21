@@ -32,12 +32,13 @@
 #define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
 #define CONFIG_START 0 // starting EEPROM address for our config
 
-int wingNavPoint = NON_NAV_LEDS;
+#define METRIC_CONVERSION 3.3;
+
+uint8_t wingNavPoint = NON_NAV_LEDS;
 
 uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show numbers
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
-double metricConversion = 3.3;
 float basePressure;
 double fakeAlt = 0;
 
@@ -50,11 +51,9 @@ CRGB leftleds[WING_LEDS];
 CRGB noseleds[NOSE_LEDS];
 CRGB fuseleds[FUSE_LEDS];
 CRGB tailleds[TAIL_LEDS];
-CRGB templeft[1];
-CRGB tempright[1];
 
-int currentShow = 0; // which LED show are we currently running
-int prevShow = 0; // did the LED show change
+uint8_t currentShow = 0; // which LED show are we currently running
+uint8_t prevShow = 0; // did the LED show change
 int wingtipStrobeCount = 0;
 unsigned long prevMillis = 0;
 unsigned long prevNavMillis = 0;
@@ -159,7 +158,7 @@ void saveConfig() { // saves current config to EEPROM
 
 void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}. also sets nav stop point.
   numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
-  for (uint8_t i = 0; i < NUM_SHOWS; i++) {
+  for (int i = 0; i < NUM_SHOWS; i++) {
     Serial.print("Show ");
     Serial.print(i);
     Serial.print(": ");
@@ -192,19 +191,11 @@ void setup() {
   Serial.begin(115200);
 
   loadConfig();
-  // if (loadConfig()) {
-  //   Serial.println("Config loaded:");
-  //   Serial.println(config.version);
-  // } else {
-  //   Serial.println("Config missing/wrong version!");
-  //   Serial.println("Initializing defaults...");
-  //   saveConfig();
-  // }
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 
-  bmp.begin(0x76); // initialize the altitude pressure sensor
+  bmp.begin(0x76); // initialize the altitude pressure sensor with I2C address 0x76
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X4,     /* Pressure oversampling */
@@ -233,10 +224,6 @@ void setup() {
 
 void loop() {
   static bool firstrun = true;
-  static int prevModeIn = 0;
-  static int currentModeIn = 0;
-  static int wingtipStrobeDelay = 50;
-  static bool wingtipStrobeState = false;
   static int programModeCounter = 0;
   static int enableCounter = 0;
   static unsigned long currentMillis = millis();
@@ -247,53 +234,6 @@ void loop() {
     firstrun = false;
   }
   
-  // uncomment for wingtip strobes. Still a work in progress.
-  /*  unsigned long currentStrobeMillis = millis();
-  if (currentStrobeMillis - prevStrobeMillis > wingtipStrobeDelay) {
-    prevStrobeMillis = currentStrobeMillis;
-    /*Serial.print(" s:");
-    Serial.print(wingtipStrobeState);
-    Serial.print(" c:");
-    Serial.print(wingtipStrobeCount);
-    switch (wingtipStrobeCount) {
-      case 0: if (wingtipStrobeState == false) {
-                templeft[1] = leftleds[WINGTIP_STROBE_LOC];
-                leftleds[WINGTIP_STROBE_LOC] = CRGB::White;
-                tempright[1] = rightleds[WINGTIP_STROBE_LOC];
-                rightleds[WINGTIP_STROBE_LOC] = CRGB::White;
-                wingtipStrobeState = true;
-                wingtipStrobeDelay = 50;
-                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
-              } else {
-                leftleds[WINGTIP_STROBE_LOC] = templeft[1];
-                rightleds[WINGTIP_STROBE_LOC] = tempright[1];
-                wingtipStrobeState = false;
-                wingtipStrobeDelay = 50;
-                wingtipStrobeCount++;
-                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
-              }
-              break;
-      case 1: if (wingtipStrobeState == false) {
-                templeft[1] = leftleds[WINGTIP_STROBE_LOC];
-                leftleds[WINGTIP_STROBE_LOC] = CRGB::White;
-                tempright[1] = rightleds[WINGTIP_STROBE_LOC];
-                rightleds[WINGTIP_STROBE_LOC] = CRGB::White;
-                wingtipStrobeState = true;
-                wingtipStrobeDelay = 50;
-                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
-              } else {
-                leftleds[WINGTIP_STROBE_LOC] = templeft[1];
-                rightleds[WINGTIP_STROBE_LOC] = tempright[1];
-                wingtipStrobeState = false;
-                wingtipStrobeDelay = 500;
-                wingtipStrobeCount++;
-                if (wingtipStrobeCount > 1) {wingtipStrobeCount = 0;}
-              }
-              break;
-    }
-    showStrip();
-  }
-  */
   // The timing control for calling each "frame" of the different animations
   currentMillis = millis();
   if (currentMillis - prevMillis > interval) {
@@ -319,7 +259,7 @@ void loop() {
         // store current program values into eeprom
         saveConfig();
         programModeCounter = 0;
-        prevModeIn = -1;
+        prevCh1 = -1;
         programInit('w'); //strobe the leds to indicate leaving program mode
       }
     } else {
@@ -346,15 +286,11 @@ void loop() {
     prevCh1 = currentCh1;
     currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
     // currentCh1 = 900;
-    if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
-
-    currentModeIn = floor(currentCh1/100);
-    if (currentModeIn != prevModeIn) {
-      currentShow = map(currentModeIn, 9, 19, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
+    if (currentCh1 != prevCh1) {
+      if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
+      currentShow = map(currentCh1, 900, 1900, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
       // currentShow = 8;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
-      
-      prevModeIn = currentModeIn;
     }
     
     // Are we entering program mode?
@@ -422,12 +358,6 @@ void stepShow() { // the main menu of different shows
             break;
     case 4: twinkle1(); //twinkle effect
             break;
-  /*    case 4: setColor(variometer); //Realistic double strobe alternating between wings
-            break;
-    case 5: setColor(orange_yellow); //Realistic landing-light style alternating between wings
-            break;
-    case 6: setColor(warm_white); // unrealistic rapid strobe of all non-nav leds
-            break;*/
     case 5: strobe(3); //Realistic double strobe alternating between wings
             break;
     case 6: strobe(2); //Realistic landing-light style alternating between wings
@@ -506,7 +436,6 @@ void setPattern (char pattern[]) {
 }
 
 void setInitPattern () {
-
   for (int i = 0; i < WING_LEDS; i++) {
     rightleds[i] = LetterToColor(init_rightwing[i]);
   }
@@ -628,6 +557,8 @@ void navLights() { // persistent nav lights
   navStrobeState++;
 }
 
+// TODO: maybe re-write some of the strobe functions in the style of the navlight "animation",
+//       with a counter and a "frame" switchcase.
 void strobe(int style) { // Various strobe patterns (duh)
   static bool StrobeState = true;
   if (prevShow != currentShow) {blank();}
@@ -760,7 +691,8 @@ void strobe(int style) { // Various strobe patterns (duh)
   }
 }
 
-// TODO: Do a full flight test to make sure this function still works properly
+// TODO: Do a full flight test to make sure this function still works properly.
+//       Also, clean up the commented code? Not sure if it might be needed again.
 void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   // static int majorAlt;
   // static int minorAlt;
@@ -770,7 +702,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   int vSpeed;
   double currentAlt;
 
-  currentAlt = bmp.readAltitude(basePressure)*metricConversion;
+  currentAlt = bmp.readAltitude(basePressure)*METRIC_CONVERSION;
   //if (currentAlt < 0) {currentAlt = 0;}
   
   if (fake != 0) {currentAlt = fake;}
@@ -843,24 +775,6 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 
   interval = 250;
   showStrip();
-    //Serial.write(27);       // ESC command
-    //Serial.print("[2J");    // clear screen command
-    //Serial.write(27);
-    //Serial.print("[H");     // cursor to home command
-    /*Serial.print("  Base: ");
-    Serial.print(baseAlt);
-    Serial.print("  Current: ");
-    Serial.print(currentAlt);
-    Serial.print("  previous: ");
-    Serial.print(prevAlt);
-    Serial.print("  Major: ");
-    Serial.print(majorAlt);
-    Serial.print("  Minor: ");
-    Serial.print(minorAlt);
-    Serial.print("  vert speed: ");
-    Serial.print(vSpeed);
-    Serial.print(" varioPalette: ");
-    Serial.println(vspeedMap);*/
 }
 
 enum {SteadyDim, Dimming, Brightening};
