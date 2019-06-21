@@ -1,7 +1,7 @@
-// #include <FastLED.h>
-//#include <Adafruit_BMP280.h>
-#include "src/FastLED/FastLED.h"
-#include "src/Adafruit_BMP280_Library/Adafruit_BMP280.h"
+// #include "src/FastLED/FastLED.h"
+// #include "src/Adafruit_BMP280_Library/Adafruit_BMP280.h"
+#include <FastLED.h>
+#include <Adafruit_BMP280.h>
 #include <EEPROM.h>
 // define number of LEDs in specific strings
 #define WING_LEDS 31
@@ -63,6 +63,7 @@ unsigned long progMillis = 0;
 unsigned long prevStrobeMillis = 0;
 
 int interval;
+
 Adafruit_BMP280 bmp;
 
 
@@ -207,11 +208,11 @@ void setup() {
   bmp.begin(0x76); // initialize the altitude pressure sensor
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X4,    /* Pressure oversampling */
-                  Adafruit_BMP280::FILTER_X4,      /* Filtering. */
+                  Adafruit_BMP280::SAMPLING_X4,     /* Pressure oversampling */
+                  Adafruit_BMP280::FILTER_X4,       /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_125); /* Standby time. */
 
-  basePressure = bmp.readPressure()/100;
+  basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
 
   pinMode(PROGRAM_CYCLE_BTN, INPUT_PULLUP);
   pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
@@ -760,17 +761,14 @@ void strobe(int style) { // Various strobe patterns (duh)
   }
 }
 
-// TODO: Do some actual testing of this function, now that I re-wrote it. Seems to work fine on the bench.
+// TODO: Do a full flight test to make sure this function still works properly
 void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   static int majorAlt;
   static int minorAlt;
   static double prevAlt;
-  //static int metric;
   static int vSpeed;
-  //static CRGBPalette16 varioPalette = variometer;
 
   double currentAlt;
-
 
   currentAlt = bmp.readAltitude(basePressure)*metricConversion;
   //if (currentAlt < 0) {currentAlt = 0;}
@@ -836,6 +834,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   for (int i; i < TAIL_LEDS; i++) {
     tailleds[i] = ColorFromPalette(palette, vspeedMap);
   }
+  
   prevAlt = currentAlt;
 
   interval = 100;
