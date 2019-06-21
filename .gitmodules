@@ -4,3 +4,6 @@
 [submodule "src/BMP280-Arduino-Library"]
 	path = src/BMP280-Arduino-Library
 	url = https://github.com/reyemxela/BMP280-Arduino-Library.git
+[submodule "src/Adafruit_BMP280_Library"]
+	path = src/Adafruit_BMP280_Library
+	url = https://github.com/adafruit/Adafruit_BMP280_Library.git
