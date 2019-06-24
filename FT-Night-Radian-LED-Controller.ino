@@ -699,6 +699,8 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   static double prevAlt;
   static int avgVSpeed[] = {0,0,0,0};
 
+  interval = 125; // we're going to use interval as a "delta" to base the vspeed off of
+
   int vSpeed;
   double currentAlt;
 
@@ -754,11 +756,11 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   int vspeedMap;
   avgVSpeed[0]=avgVSpeed[1];
   avgVSpeed[1]=avgVSpeed[2];
-  avgVSpeed[2]=(currentAlt-prevAlt)*100;
+  avgVSpeed[2]=(currentAlt-prevAlt)*100; // *100 just gets things into int territory so we can work with it easier
   vSpeed = (avgVSpeed[0]+avgVSpeed[1]+avgVSpeed[2])/3;
-  vSpeed = constrain(vSpeed, -VSPEED_MAP, VSPEED_MAP);
+  vSpeed = constrain(vSpeed, -interval, interval);
 
-  vspeedMap = map(vSpeed, -VSPEED_MAP, VSPEED_MAP, 0, 240);
+  vspeedMap = map(vSpeed, -interval, interval, 0, 240);
 
   for (int i = 0; i < TAIL_LEDS; i++) {
     tailleds[i] = ColorFromPalette(palette, vspeedMap);
@@ -773,7 +775,6 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   
   prevAlt = currentAlt;
 
-  interval = 250;
   showStrip();
 }
 
