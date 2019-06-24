@@ -200,7 +200,7 @@ void setup() {
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X4,     /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X4,       /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_125); /* Standby time. */
+                  Adafruit_BMP280::STANDBY_MS_63); /* Standby time. */
 
   basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
 
@@ -699,7 +699,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   static double prevAlt;
   static int avgVSpeed[] = {0,0,0,0};
 
-  interval = 125; // we're going to use interval as a "delta" to base the vspeed off of
+  interval = 63; // we're going to use interval as a "delta" to base the vspeed off of
 
   int vSpeed;
   double currentAlt;
