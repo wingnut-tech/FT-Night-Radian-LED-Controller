@@ -116,7 +116,8 @@ DEFINE_GRADIENT_PALETTE( blue_black ) {     //RGB(0,0,0) RGB(0,0,255)
 
 DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(0,255,0)
   0,    255,0,0, //Red
-128,    255,255,255, //White
+118,    255,255,255, //White
+138,    255,255,255, //White
 255,    0,255,0 }; //Green
 
 
@@ -198,7 +199,7 @@ void setup() {
   bmp.begin(0x76); // initialize the altitude pressure sensor with I2C address 0x76
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X4,     /* Pressure oversampling */
+                  Adafruit_BMP280::SAMPLING_X16,     /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X4,       /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_63); /* Standby time. */
 
@@ -699,7 +700,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   static double prevAlt;
   static int avgVSpeed[] = {0,0,0,0};
 
-  interval = 63; // we're going to use interval as a "delta" to base the vspeed off of
+  interval = 100; // we're going to use interval as a "delta" to base the vspeed off of
 
   int vSpeed;
   double currentAlt;
