@@ -352,6 +352,15 @@ void stepShow() { // the main menu of different shows
             break;
     case 1: colorWave1(10);//regular rainbow
             break;
+            /*TODO Solid colors
+            colorWave1(); //Other colors, other speeds?
+            setColor(red)
+            setColor(orange)
+            setColor(yellow)
+            setColor(green)
+            setColor(blue)
+            setColor(violet)
+             Other colors? */
     case 2: setColor(blue);
             break;
     case 3: setColor(pure_white);
@@ -362,8 +371,16 @@ void stepShow() { // the main menu of different shows
             break;
     case 6: strobe(2); //Realistic landing-light style alternating between wings
             break;
-    case 7: strobe(1); // unrealistic rapid strobe of all non-nav leds
+    case 7: strobe(1); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
             break;
+            /*TODO Chase programs:
+            Chase all on but a few off. 
+            Chase all off but a few on.
+            Chase all out from center.
+            Chase all in to center.
+            Chase forward.
+            Chase rearward.
+             */
     case 8: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
   }
