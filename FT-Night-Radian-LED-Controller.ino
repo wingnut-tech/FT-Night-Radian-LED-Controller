@@ -211,9 +211,6 @@ void setup() {
   FastLED.addLeds<NEOPIXEL, FUSE_PIN>(fuseleds, FUSE_LEDS);
   FastLED.addLeds<NEOPIXEL, NOSE_PIN>(noseleds, NOSE_LEDS);
   FastLED.addLeds<NEOPIXEL, TAIL_PIN>(tailleds, TAIL_LEDS);
-
-  Serial.print("Base pressure: ");
-  Serial.println(basePressure);
 }
 
 //                   _         _                    
