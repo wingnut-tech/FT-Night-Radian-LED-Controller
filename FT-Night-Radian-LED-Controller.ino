@@ -52,6 +52,8 @@ CRGB tailleds[TAIL_LEDS];
 
 uint8_t currentShow = 0; // which LED show are we currently running
 uint8_t prevShow = 0; // did the LED show change
+int currentStep = 0;
+
 unsigned long prevMillis = 0;
 unsigned long prevNavMillis = 0;
 unsigned long progMillis = 0;
@@ -325,6 +327,7 @@ void stepShow() { // the main menu of different shows
   if (currentShow != prevShow) {
     Serial.print("Current Show: ");
     Serial.println(currentShow);
+    currentStep = 0;
     if (programMode) {
       //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
       if (config.enabledShows[currentShow]) { // this should now check EEPROM config
@@ -472,8 +475,6 @@ void setInitPattern () {
 }
 
 void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
-  static int currentStep = 0;
-
   if (currentStep > 255) {currentStep = 0;}
   for (int i = 0; i < wingNavPoint; i++) {
       int j = triwave8((i * ledOffset) + currentStep);
@@ -494,7 +495,6 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
 
 void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
   if (prevShow != currentShow) {blank();}
-  static int currentStep = 0;
   if (currentStep > 255) {currentStep = 0;}
   for (int j = 0; j < wingNavPoint; j++) {
     rightleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);
@@ -507,29 +507,28 @@ void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
 }
 
 void chase() { // White segment that chases through the wings
-  static int chaseStep = 0;
   if (prevShow != currentShow) {blank();} // blank all LEDs at the start of this show
   
-  if (chaseStep > wingNavPoint) {
+  if (currentStep > wingNavPoint) {
     rightleds[wingNavPoint] = CRGB::Black;
     leftleds[wingNavPoint] = CRGB::Black;
-    chaseStep = 0;
+    currentStep = 0;
   }
 
-  rightleds[chaseStep] = CRGB::White;
-  leftleds[chaseStep] = CRGB::White;
-  if (chaseStep < NOSE_LEDS) {noseleds[chaseStep] = CRGB::White;}
-  if (chaseStep < FUSE_LEDS) {fuseleds[chaseStep] = CRGB::White;}
-  if (chaseStep < TAIL_LEDS) {tailleds[chaseStep] = CRGB::White;}
+  rightleds[currentStep] = CRGB::White;
+  leftleds[currentStep] = CRGB::White;
+  if (currentStep < NOSE_LEDS) {noseleds[currentStep] = CRGB::White;}
+  if (currentStep < FUSE_LEDS) {fuseleds[currentStep] = CRGB::White;}
+  if (currentStep < TAIL_LEDS) {tailleds[currentStep] = CRGB::White;}
 
-  rightleds[chaseStep-1] = CRGB::Black;
-  leftleds[chaseStep-1] = CRGB::Black;
-  if (chaseStep < NOSE_LEDS+1) {noseleds[chaseStep-1] = CRGB::Black;}
-  if (chaseStep < FUSE_LEDS+1) {fuseleds[chaseStep-1] = CRGB::Black;}
-  if (chaseStep < TAIL_LEDS+1) {tailleds[chaseStep-1] = CRGB::Black;}
+  rightleds[currentStep-1] = CRGB::Black;
+  leftleds[currentStep-1] = CRGB::Black;
+  if (currentStep < NOSE_LEDS+1) {noseleds[currentStep-1] = CRGB::Black;}
+  if (currentStep < FUSE_LEDS+1) {fuseleds[currentStep-1] = CRGB::Black;}
+  if (currentStep < TAIL_LEDS+1) {tailleds[currentStep-1] = CRGB::Black;}
 
   showStrip();
-  chaseStep++;
+  currentStep++;
   interval = 30;
 }
 
@@ -541,8 +540,7 @@ void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helpe
 }
 
 void navLights() { // persistent nav lights
-  static int navStrobeState = 0;
-  switch(navStrobeState) {
+  switch(currentStep) {
     case 0:
       // red/green
       setNavLeds(CRGB::Red, CRGB::Green);
@@ -562,11 +560,11 @@ void navLights() { // persistent nav lights
     case 56:
       // red/green again
       setNavLeds(CRGB::Red, CRGB::Green);
-      navStrobeState = 0;
+      currentStep = 0;
       break;
   }
   showStrip();
-  navStrobeState++;
+  currentStep++;
 }
 
 // TODO: maybe re-write some of the strobe functions in the style of the navlight "animation",
@@ -625,9 +623,8 @@ void strobe(int style) { // Various strobe patterns (duh)
     break;
 
     case 3: //alternate double-blink strobing of left and right wing
-      static int strobeStep = 0;
 
-      switch(strobeStep) {
+      switch(currentStep) {
 
         case 0: // Right wing on for 50ms
           for (int i = 0; i < wingNavPoint; i++) {
@@ -696,8 +693,8 @@ void strobe(int style) { // Various strobe patterns (duh)
       }
 
       showStrip();
-      strobeStep++;
-      if (strobeStep == 8) {strobeStep = 0;}
+      currentStep++;
+      if (currentStep == 8) {currentStep = 0;}
     break;
 
   }
