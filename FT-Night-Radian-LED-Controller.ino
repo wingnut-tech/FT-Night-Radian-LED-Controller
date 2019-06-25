@@ -12,9 +12,7 @@
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
 //#define TMP_BRIGHTNESS 55
-#define VSPEED_MAP 100
 #define MAX_ALTIMETER 400
-#define WINGTIP_STROBE_LOC 27
 #define PROGRAM_CYCLE_BTN 6
 #define PROGRAM_ENABLE_BTN 7
 
@@ -54,7 +52,6 @@ CRGB tailleds[TAIL_LEDS];
 
 uint8_t currentShow = 0; // which LED show are we currently running
 uint8_t prevShow = 0; // did the LED show change
-int wingtipStrobeCount = 0;
 unsigned long prevMillis = 0;
 unsigned long prevNavMillis = 0;
 unsigned long progMillis = 0;
@@ -149,11 +146,6 @@ void loadConfig() { // loads existing config from EEPROM, or if wrong version, s
 
 void saveConfig() { // saves current config to EEPROM
   EEPROM.put(CONFIG_START, config);
-  // EEPROM.put() theoretically only pushes changed bytes, so should be safe.
-  // Otherwise, this is an alternative method:
-
-  // for (int i=0; i<sizeof(config); i++)
-  //   EEPROM.update(CONFIG_START + i, *((char*)&config + i));
   updateShowConfig();
 }
 
@@ -179,10 +171,6 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
     wingNavPoint = WING_LEDS;
     Serial.println("off.");
   }
-    // I think this will work. It basically checks to make sure the altimeter hardware is working on boot up.
-    Serial.print("Altitude: ");
-    Serial.println(bmp.readAltitude(basePressure)*METRIC_CONVERSION);
-
 }
 
 //            _                
@@ -218,6 +206,9 @@ void setup() {
   FastLED.addLeds<NEOPIXEL, FUSE_PIN>(fuseleds, FUSE_LEDS);
   FastLED.addLeds<NEOPIXEL, NOSE_PIN>(noseleds, NOSE_LEDS);
   FastLED.addLeds<NEOPIXEL, TAIL_PIN>(tailleds, TAIL_LEDS);
+
+  Serial.print("Base pressure: ");
+  Serial.println(basePressure);
 }
 
 //                   _         _                    
@@ -232,7 +223,6 @@ void loop() {
   static int programModeCounter = 0;
   static int enableCounter = 0;
   static unsigned long currentMillis = millis();
-  static int progEnableBtnHist[] = {0,0,0};
 
   if (firstrun) {
     setInitPattern(); // Set the LED strings to their boot-up configuration
@@ -801,12 +791,12 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 }
 
 enum {SteadyDim, Dimming, Brightening};
-void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
+void doTwinkle1(struct CRGB * ledArray, uint8_t * pixelState, uint8_t size) {
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
   const CRGB colorMin = CRGB(4, 4, 4);
-  const int twinkleChance = 1;
+  const uint8_t twinkleChance = 1;
 
   for (int i = 0; i < size; i++) {
     if (pixelState[i] == SteadyDim) {
@@ -838,11 +828,11 @@ void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
 }
 
 void twinkle1 () { // Random twinkle effect on all LEDs
-  static int pixelStateRight[WING_LEDS];
-  static int pixelStateLeft[WING_LEDS];
-  static int pixelStateNose[NOSE_LEDS];
-  static int pixelStateFuse[FUSE_LEDS];
-  static int pixelStateTail[TAIL_LEDS];
+  static uint8_t pixelStateRight[WING_LEDS];
+  static uint8_t pixelStateLeft[WING_LEDS];
+  static uint8_t pixelStateNose[NOSE_LEDS];
+  static uint8_t pixelStateFuse[FUSE_LEDS];
+  static uint8_t pixelStateTail[TAIL_LEDS];
 
   if (prevShow != currentShow) { // Reset everything at start of show
     memset(pixelStateRight, SteadyDim, sizeof(pixelStateRight));
