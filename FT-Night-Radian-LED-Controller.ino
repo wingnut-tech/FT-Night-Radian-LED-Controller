@@ -25,9 +25,9 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
-#define NUM_SHOWS 9
+#define NUM_SHOWS 16
 
-#define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes)
+#define CONFIG_VERSION 0x1111 ^ NUM_SHOWS // EEPROM config version (increment this any time the Config struct changes). Dynamically updates when NUM_SHOWS changes.
 #define CONFIG_START 0 // starting EEPROM address for our config
 
 #define METRIC_CONVERSION 3.3;
@@ -96,18 +96,6 @@ DEFINE_GRADIENT_PALETTE( orange_yellow ) {  //RGB(255,165,0) RGB(255,244,175) RG
 DEFINE_GRADIENT_PALETTE( teal_blue ) {      //RGB(0,244,216) RGB(48,130,219)
   0,     0,244,216,   //tealish
 255,    48,130,219 }; //blueish
-
-DEFINE_GRADIENT_PALETTE( pure_white ) {     //RGB(255,255,255)
-  0,    255,255,255,
-255,    255,255,255 };
-
-DEFINE_GRADIENT_PALETTE( warm_white ) {     //RGB(255,172, 68)
-  0,    255,172, 68,
-255,    255,172, 68 };
-
-DEFINE_GRADIENT_PALETTE( blue ) {           //RGB(0,0,255)
-  0,    0,0,255,
-255,    0,0,255 };
 
 DEFINE_GRADIENT_PALETTE( blue_black ) {     //RGB(0,0,0) RGB(0,0,255)
   0,    0,0,0,
@@ -328,6 +316,7 @@ void stepShow() { // the main menu of different shows
     Serial.print("Current Show: ");
     Serial.println(currentShow);
     currentStep = 0;
+    blank();
     if (programMode) {
       //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
       if (config.enabledShows[currentShow]) { // this should now check EEPROM config
@@ -350,27 +339,31 @@ void stepShow() { // the main menu of different shows
             break;
     case 1: colorWave1(10, 10);//regular rainbow
             break;
-            // TODO case x: colorWave1(0, 10); // whole plane solid color rainbow
-            /*TODO Solid colors
-            colorWave1(); //Other colors, other speeds?
-            setColor(red)
-            setColor(orange)
-            setColor(yellow)
-            setColor(green)
-            setColor(blue)
-            setColor(violet)
-             Other colors? */
-    case 2: setColor(CRGB::Blue);
+    case 2: colorWave1(0, 10); // whole plane solid color rainbow
             break;
-    case 3: setColor(CRGB::White);
+    case 3: setColor(CRGB::Red);
             break;
-    case 4: twinkle1(); //twinkle effect
+    case 4: setColor(CRGB::Orange);
             break;
-    case 5: strobe(3); //Realistic double strobe alternating between wings
+    case 5: setColor(CRGB::Yellow);
             break;
-    case 6: strobe(2); //Realistic landing-light style alternating between wings
+    case 6: setColor(CRGB::Green);
             break;
-    case 7: strobe(1); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
+    case 7: setColor(CRGB::Blue);
+            break;
+    case 8: setColor(CRGB::Indigo);
+            break;
+    case 9: setColor(CRGB::DarkCyan);
+            break;
+    case 10: setColor(CRGB::White);
+            break;
+    case 11: twinkle1(); //twinkle effect
+            break;
+    case 12: strobe(3); //Realistic double strobe alternating between wings
+            break;
+    case 13: strobe(2); //Realistic landing-light style alternating between wings
+            break;
+    case 14: strobe(1); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
             break;
             /*TODO Chase programs:
             Chase all on but a few off. 
@@ -380,7 +373,7 @@ void stepShow() { // the main menu of different shows
             Chase forward.
             Chase rearward.
              */
-    case 8: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
+    case 15: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
   }
   prevShow = currentShow;
@@ -401,22 +394,16 @@ void showStrip () {
 }
 
 void blank() { // Turn off all LEDs
-  for (int i = 0; i < wingNavPoint; i++) {
-    rightleds[i] = CRGB::Black;
-    leftleds[i] = CRGB::Black;
-  }
-  for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = CRGB::Black;}
-  for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::Black;}
-  for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::Black;}
+  setColor(CRGB::Black);
   showStrip();
 }
 
 void setColor (CRGB color) {
   fill_solid(rightleds, wingNavPoint, color);
   fill_solid(leftleds, wingNavPoint, color);
-  fill_solid(noseleds, wingNavPoint, color);
-  fill_solid(fuseleds, wingNavPoint, color);
-  fill_solid(tailleds, wingNavPoint, color);
+  fill_solid(noseleds, NOSE_LEDS, color);
+  fill_solid(fuseleds, FUSE_LEDS, color);
+  fill_solid(tailleds, TAIL_LEDS, color);
 }
 
 void setColor (CRGBPalette16 palette) {
@@ -503,7 +490,6 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
 //   \__,_|_| |_|_|_| |_| |_|\__,_|\__|_|\___/|_| |_|___/ 
 
 void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on wings and fuselage
-  if (prevShow != currentShow) {blank();}
   if (currentStep > 255) {currentStep = 0;}
   for (int j = 0; j < wingNavPoint; j++) {
     rightleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);
@@ -516,11 +502,7 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
 }
 
 void chase() { // White segment that chases through the wings
-  if (prevShow != currentShow) {blank();} // blank all LEDs at the start of this show
-  
   if (currentStep > wingNavPoint) {
-    rightleds[wingNavPoint] = CRGB::Black;
-    leftleds[wingNavPoint] = CRGB::Black;
     currentStep = 0;
   }
 
@@ -538,9 +520,9 @@ void chase() { // White segment that chases through the wings
     if (currentStep < TAIL_LEDS+1) {tailleds[currentStep-1] = CRGB::Black;}
   }
 
-  showStrip();
   currentStep++;
   interval = 30;
+  showStrip();
 }
 
 void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helper function for the nav lights
@@ -584,7 +566,6 @@ void navLights() { // persistent nav lights
 //       with a counter and a "frame" switchcase.
 void strobe(int style) { // Various strobe patterns (duh)
   static bool StrobeState = true;
-  if (prevShow != currentShow) {blank();}
 
   switch(style) {
 
