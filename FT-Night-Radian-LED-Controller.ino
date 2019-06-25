@@ -515,14 +515,13 @@ void chase(CRGB color1 = CRGB::White, CRGB color2 = CRGB::Black, int length = 3)
 
   for (int i = 0; i < length; i++) {
     int j = currentStep - i;
-    if (j >= 0) {
+    if (j < 0) {j = currentStep - j;}
       CRGB fadeColor = color1.lerp8(color2, (255 / length) * i);
       rightleds[j] = fadeColor;
       leftleds[j] = fadeColor;
       if (currentStep < TAIL_LEDS+1) {tailleds[j] = fadeColor;}
       if (currentStep < NOSE_LEDS+1) {noseleds[j] = fadeColor;}
       if (currentStep < FUSE_LEDS+1) {fuseleds[j] = fadeColor;}
-    }
   }
 
   currentStep++;
