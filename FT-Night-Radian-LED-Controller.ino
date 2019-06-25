@@ -25,7 +25,7 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
-#define NUM_SHOWS 16
+#define NUM_SHOWS 18
 
 #define CONFIG_VERSION 0x1111 ^ NUM_SHOWS // EEPROM config version (increment this any time the Config struct changes). Dynamically updates when NUM_SHOWS changes.
 #define CONFIG_START 0 // starting EEPROM address for our config
@@ -365,6 +365,10 @@ void stepShow() { // the main menu of different shows
             break;
     case 14: strobe(1); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
             break;
+    case 15: chase();
+            break;
+    case 16: chase(CRGB::Orange, CRGB::DarkCyan, 4);
+            break;
             /*TODO Chase programs:
             Chase all on but a few off. 
             Chase all off but a few on.
@@ -373,7 +377,7 @@ void stepShow() { // the main menu of different shows
             Chase forward.
             Chase rearward.
              */
-    case 15: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
+    case 17: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
             break;
   }
   prevShow = currentShow;
@@ -501,23 +505,24 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
   showStrip();
 }
 
-void chase() { // White segment that chases through the wings
-  if (currentStep > wingNavPoint) {
+// TODO: this needs to be tested. I think the logic checks out with i/j/lerp, but not sure.
+void chase(CRGB color1 = CRGB::White, CRGB color2 = CRGB::Black, int length = 3) { // color segment that chases through the wings
+  if (currentStep >= wingNavPoint) {
     currentStep = 0;
   }
 
-  rightleds[currentStep] = CRGB::White;
-  leftleds[currentStep] = CRGB::White;
-  if (currentStep < NOSE_LEDS) {noseleds[currentStep] = CRGB::White;}
-  if (currentStep < FUSE_LEDS) {fuseleds[currentStep] = CRGB::White;}
-  if (currentStep < TAIL_LEDS) {tailleds[currentStep] = CRGB::White;}
+  setColor(color2);
 
-  if (currentStep > 0) {
-    rightleds[currentStep-1] = CRGB::Black;
-    leftleds[currentStep-1] = CRGB::Black;
-    if (currentStep < NOSE_LEDS+1) {noseleds[currentStep-1] = CRGB::Black;}
-    if (currentStep < FUSE_LEDS+1) {fuseleds[currentStep-1] = CRGB::Black;}
-    if (currentStep < TAIL_LEDS+1) {tailleds[currentStep-1] = CRGB::Black;}
+  for (int i = 0; i < length; i++) {
+    int j = currentStep - i;
+    if (j >= 0) {
+      CRGB fadeColor = color1.lerp8(color2, (255 / length) * i);
+      rightleds[j] = fadeColor;
+      leftleds[j] = fadeColor;
+      if (currentStep < TAIL_LEDS+1) {tailleds[j] = fadeColor;}
+      if (currentStep < NOSE_LEDS+1) {noseleds[j] = fadeColor;}
+      if (currentStep < FUSE_LEDS+1) {fuseleds[j] = fadeColor;}
+    }
   }
 
   currentStep++;
