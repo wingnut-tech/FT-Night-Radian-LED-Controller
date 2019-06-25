@@ -12,9 +12,7 @@
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
 //#define TMP_BRIGHTNESS 55
-#define VSPEED_MAP 100
 #define MAX_ALTIMETER 400
-#define WINGTIP_STROBE_LOC 27
 #define PROGRAM_CYCLE_BTN 6
 #define PROGRAM_ENABLE_BTN 7
 
@@ -54,7 +52,8 @@ CRGB tailleds[TAIL_LEDS];
 
 uint8_t currentShow = 0; // which LED show are we currently running
 uint8_t prevShow = 0; // did the LED show change
-int wingtipStrobeCount = 0;
+int currentStep = 0;
+
 unsigned long prevMillis = 0;
 unsigned long prevNavMillis = 0;
 unsigned long progMillis = 0;
@@ -149,11 +148,6 @@ void loadConfig() { // loads existing config from EEPROM, or if wrong version, s
 
 void saveConfig() { // saves current config to EEPROM
   EEPROM.put(CONFIG_START, config);
-  // EEPROM.put() theoretically only pushes changed bytes, so should be safe.
-  // Otherwise, this is an alternative method:
-
-  // for (int i=0; i<sizeof(config); i++)
-  //   EEPROM.update(CONFIG_START + i, *((char*)&config + i));
   updateShowConfig();
 }
 
@@ -217,6 +211,9 @@ void setup() {
   FastLED.addLeds<NEOPIXEL, FUSE_PIN>(fuseleds, FUSE_LEDS);
   FastLED.addLeds<NEOPIXEL, NOSE_PIN>(noseleds, NOSE_LEDS);
   FastLED.addLeds<NEOPIXEL, TAIL_PIN>(tailleds, TAIL_LEDS);
+
+  Serial.print("Base pressure: ");
+  Serial.println(basePressure);
 }
 
 //                   _         _                    
@@ -231,7 +228,6 @@ void loop() {
   static int programModeCounter = 0;
   static int enableCounter = 0;
   static unsigned long currentMillis = millis();
-  static int progEnableBtnHist[] = {0,0,0};
 
   if (firstrun) {
     setInitPattern(); // Set the LED strings to their boot-up configuration
@@ -334,6 +330,7 @@ void stepShow() { // the main menu of different shows
   if (currentShow != prevShow) {
     Serial.print("Current Show: ");
     Serial.println(currentShow);
+    currentStep = 0;
     if (programMode) {
       //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
       if (config.enabledShows[currentShow]) { // this should now check EEPROM config
@@ -481,8 +478,6 @@ void setInitPattern () {
 }
 
 void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
-  static int currentStep = 0;
-
   if (currentStep > 255) {currentStep = 0;}
   for (int i = 0; i < wingNavPoint; i++) {
       int j = triwave8((i * ledOffset) + currentStep);
@@ -503,7 +498,6 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
 
 void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
   if (prevShow != currentShow) {blank();}
-  static int currentStep = 0;
   if (currentStep > 255) {currentStep = 0;}
   for (int j = 0; j < wingNavPoint; j++) {
     rightleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);
@@ -516,29 +510,28 @@ void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
 }
 
 void chase() { // White segment that chases through the wings
-  static int chaseStep = 0;
   if (prevShow != currentShow) {blank();} // blank all LEDs at the start of this show
   
-  if (chaseStep > wingNavPoint) {
+  if (currentStep > wingNavPoint) {
     rightleds[wingNavPoint] = CRGB::Black;
     leftleds[wingNavPoint] = CRGB::Black;
-    chaseStep = 0;
+    currentStep = 0;
   }
 
-  rightleds[chaseStep] = CRGB::White;
-  leftleds[chaseStep] = CRGB::White;
-  if (chaseStep < NOSE_LEDS) {noseleds[chaseStep] = CRGB::White;}
-  if (chaseStep < FUSE_LEDS) {fuseleds[chaseStep] = CRGB::White;}
-  if (chaseStep < TAIL_LEDS) {tailleds[chaseStep] = CRGB::White;}
+  rightleds[currentStep] = CRGB::White;
+  leftleds[currentStep] = CRGB::White;
+  if (currentStep < NOSE_LEDS) {noseleds[currentStep] = CRGB::White;}
+  if (currentStep < FUSE_LEDS) {fuseleds[currentStep] = CRGB::White;}
+  if (currentStep < TAIL_LEDS) {tailleds[currentStep] = CRGB::White;}
 
-  rightleds[chaseStep-1] = CRGB::Black;
-  leftleds[chaseStep-1] = CRGB::Black;
-  if (chaseStep < NOSE_LEDS+1) {noseleds[chaseStep-1] = CRGB::Black;}
-  if (chaseStep < FUSE_LEDS+1) {fuseleds[chaseStep-1] = CRGB::Black;}
-  if (chaseStep < TAIL_LEDS+1) {tailleds[chaseStep-1] = CRGB::Black;}
+  rightleds[currentStep-1] = CRGB::Black;
+  leftleds[currentStep-1] = CRGB::Black;
+  if (currentStep < NOSE_LEDS+1) {noseleds[currentStep-1] = CRGB::Black;}
+  if (currentStep < FUSE_LEDS+1) {fuseleds[currentStep-1] = CRGB::Black;}
+  if (currentStep < TAIL_LEDS+1) {tailleds[currentStep-1] = CRGB::Black;}
 
   showStrip();
-  chaseStep++;
+  currentStep++;
   interval = 30;
 }
 
@@ -550,8 +543,7 @@ void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helpe
 }
 
 void navLights() { // persistent nav lights
-  static int navStrobeState = 0;
-  switch(navStrobeState) {
+  switch(currentStep) {
     case 0:
       // red/green
       setNavLeds(CRGB::Red, CRGB::Green);
@@ -571,11 +563,11 @@ void navLights() { // persistent nav lights
     case 56:
       // red/green again
       setNavLeds(CRGB::Red, CRGB::Green);
-      navStrobeState = 0;
+      currentStep = 0;
       break;
   }
   showStrip();
-  navStrobeState++;
+  currentStep++;
 }
 
 // TODO: maybe re-write some of the strobe functions in the style of the navlight "animation",
@@ -634,9 +626,8 @@ void strobe(int style) { // Various strobe patterns (duh)
     break;
 
     case 3: //alternate double-blink strobing of left and right wing
-      static int strobeStep = 0;
 
-      switch(strobeStep) {
+      switch(currentStep) {
 
         case 0: // Right wing on for 50ms
           for (int i = 0; i < wingNavPoint; i++) {
@@ -705,8 +696,8 @@ void strobe(int style) { // Various strobe patterns (duh)
       }
 
       showStrip();
-      strobeStep++;
-      if (strobeStep == 8) {strobeStep = 0;}
+      currentStep++;
+      if (currentStep == 8) {currentStep = 0;}
     break;
 
   }
@@ -800,12 +791,12 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 }
 
 enum {SteadyDim, Dimming, Brightening};
-void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
+void doTwinkle1(struct CRGB * ledArray, uint8_t * pixelState, uint8_t size) {
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
   const CRGB colorMin = CRGB(4, 4, 4);
-  const int twinkleChance = 1;
+  const uint8_t twinkleChance = 1;
 
   for (int i = 0; i < size; i++) {
     if (pixelState[i] == SteadyDim) {
@@ -837,11 +828,11 @@ void doTwinkle1(struct CRGB * ledArray, int * pixelState, int size) {
 }
 
 void twinkle1 () { // Random twinkle effect on all LEDs
-  static int pixelStateRight[WING_LEDS];
-  static int pixelStateLeft[WING_LEDS];
-  static int pixelStateNose[NOSE_LEDS];
-  static int pixelStateFuse[FUSE_LEDS];
-  static int pixelStateTail[TAIL_LEDS];
+  static uint8_t pixelStateRight[WING_LEDS];
+  static uint8_t pixelStateLeft[WING_LEDS];
+  static uint8_t pixelStateNose[NOSE_LEDS];
+  static uint8_t pixelStateFuse[FUSE_LEDS];
+  static uint8_t pixelStateTail[TAIL_LEDS];
 
   if (prevShow != currentShow) { // Reset everything at start of show
     memset(pixelStateRight, SteadyDim, sizeof(pixelStateRight));
