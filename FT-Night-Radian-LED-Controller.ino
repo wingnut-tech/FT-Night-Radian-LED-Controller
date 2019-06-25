@@ -348,8 +348,9 @@ void stepShow() { // the main menu of different shows
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
     case 0: blank(); //all off
             break;
-    case 1: colorWave1(10);//regular rainbow
+    case 1: colorWave1(10, 10);//regular rainbow
             break;
+            // TODO case x: colorWave1(0, 10); // whole plane solid color rainbow
             /*TODO Solid colors
             colorWave1(); //Other colors, other speeds?
             setColor(red)
@@ -359,9 +360,9 @@ void stepShow() { // the main menu of different shows
             setColor(blue)
             setColor(violet)
              Other colors? */
-    case 2: setColor(blue);
+    case 2: setColor(CRGB::Blue);
             break;
-    case 3: setColor(pure_white);
+    case 3: setColor(CRGB::White);
             break;
     case 4: twinkle1(); //twinkle effect
             break;
@@ -406,8 +407,16 @@ void blank() { // Turn off all LEDs
   }
   for (int i = 0; i < NOSE_LEDS; i++) {noseleds[i] = CRGB::Black;}
   for (int i = 0; i < FUSE_LEDS; i++) {fuseleds[i] = CRGB::Black;}
-  for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::White;}
+  for (int i = 0; i < TAIL_LEDS; i++) {tailleds[i] = CRGB::Black;}
   showStrip();
+}
+
+void setColor (CRGB color) {
+  fill_solid(rightleds, wingNavPoint, color);
+  fill_solid(leftleds, wingNavPoint, color);
+  fill_solid(noseleds, wingNavPoint, color);
+  fill_solid(fuseleds, wingNavPoint, color);
+  fill_solid(tailleds, wingNavPoint, color);
 }
 
 void setColor (CRGBPalette16 palette) {
@@ -493,7 +502,7 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
 //  | (_| | | | | | | | | | | (_| | |_| | (_) | | | \__ \ 
 //   \__,_|_| |_|_|_| |_| |_|\__,_|\__|_|\___/|_| |_|___/ 
 
-void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
+void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on wings and fuselage
   if (prevShow != currentShow) {blank();}
   if (currentStep > 255) {currentStep = 0;}
   for (int j = 0; j < wingNavPoint; j++) {
@@ -502,7 +511,7 @@ void colorWave1 (int ledOffset) { // Rainbow pattern on wings and fuselage
     if (j < FUSE_LEDS) {fuseleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);}
   }
   currentStep++;
-  interval = 10;
+  interval = l_interval;
   showStrip();
 }
 
@@ -521,11 +530,13 @@ void chase() { // White segment that chases through the wings
   if (currentStep < FUSE_LEDS) {fuseleds[currentStep] = CRGB::White;}
   if (currentStep < TAIL_LEDS) {tailleds[currentStep] = CRGB::White;}
 
-  rightleds[currentStep-1] = CRGB::Black;
-  leftleds[currentStep-1] = CRGB::Black;
-  if (currentStep < NOSE_LEDS+1) {noseleds[currentStep-1] = CRGB::Black;}
-  if (currentStep < FUSE_LEDS+1) {fuseleds[currentStep-1] = CRGB::Black;}
-  if (currentStep < TAIL_LEDS+1) {tailleds[currentStep-1] = CRGB::Black;}
+  if (currentStep > 0) {
+    rightleds[currentStep-1] = CRGB::Black;
+    leftleds[currentStep-1] = CRGB::Black;
+    if (currentStep < NOSE_LEDS+1) {noseleds[currentStep-1] = CRGB::Black;}
+    if (currentStep < FUSE_LEDS+1) {fuseleds[currentStep-1] = CRGB::Black;}
+    if (currentStep < TAIL_LEDS+1) {tailleds[currentStep-1] = CRGB::Black;}
+  }
 
   showStrip();
   currentStep++;
@@ -539,6 +550,8 @@ void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helpe
   }
 }
 
+//TODO re-write navlights and all function logic to do a white tail when navlights are on.
+//     Similar to the wingNavPoint setup
 void navLights() { // persistent nav lights
   switch(currentStep) {
     case 0:
