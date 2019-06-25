@@ -365,9 +365,9 @@ void stepShow() { // the main menu of different shows
             break;
     case 14: strobe(1); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
             break;
-    case 15: chase();
+    case 15: chase(CRGB::White, CRGB::Black, 5);
             break;
-    case 16: chase(CRGB::Orange, CRGB::DarkCyan, 4);
+    case 16: chase(CRGB::Orange, CRGB::DarkCyan, 6);
             break;
             /*TODO Chase programs:
             Chase all on but a few off. 
@@ -506,7 +506,7 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
 }
 
 // TODO: this needs to be tested. I think the logic checks out with i/j/lerp, but not sure.
-void chase(CRGB color1 = CRGB::White, CRGB color2 = CRGB::Black, int length = 3) { // color segment that chases through the wings
+void chase(CRGB color1, CRGB color2, int length) { // color segment that chases through the wings
   if (currentStep >= wingNavPoint) {
     currentStep = 0;
   }
@@ -526,7 +526,7 @@ void chase(CRGB color1 = CRGB::White, CRGB color2 = CRGB::Black, int length = 3)
   }
 
   currentStep++;
-  interval = 30;
+  interval = 60;
   showStrip();
 }
 
@@ -540,7 +540,8 @@ void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helpe
 //TODO re-write navlights and all function logic to do a white tail when navlights are on.
 //     Similar to the wingNavPoint setup
 void navLights() { // persistent nav lights
-  switch(currentStep) {
+static int navStrobeState = 0;
+  switch(navStrobeState) {
     case 0:
       // red/green
       setNavLeds(CRGB::Red, CRGB::Green);
@@ -560,11 +561,11 @@ void navLights() { // persistent nav lights
     case 56:
       // red/green again
       setNavLeds(CRGB::Red, CRGB::Green);
-      currentStep = 0;
+      navStrobeState = 0;
       break;
   }
   showStrip();
-  currentStep++;
+  navStrobeState++;
 }
 
 // TODO: maybe re-write some of the strobe functions in the style of the navlight "animation",
