@@ -179,6 +179,10 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
     wingNavPoint = WING_LEDS;
     Serial.println("off.");
   }
+    // I think this will work. It basically checks to make sure the altimeter hardware is working on boot up.
+    Serial.print("Altitude: ");
+    Serial.println(bmp.readAltitude(basePressure)*METRIC_CONVERSION);
+
 }
 
 //            _                
