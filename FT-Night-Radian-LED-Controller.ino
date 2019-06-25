@@ -179,10 +179,6 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
     wingNavPoint = WING_LEDS;
     Serial.println("off.");
   }
-    // I think this will work. It basically checks to make sure the altimeter hardware is working on boot up.
-    Serial.print("Altitude: ");
-    Serial.println(bmp.readAltitude(basePressure)*METRIC_CONVERSION);
-
 }
 
 //            _                
@@ -208,6 +204,9 @@ void setup() {
                   Adafruit_BMP280::STANDBY_MS_63); /* Standby time. */
 
   basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
+
+  Serial.print("Base Pressure: ");
+  Serial.println(basePressure);
 
   pinMode(PROGRAM_CYCLE_BTN, INPUT_PULLUP);
   pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
