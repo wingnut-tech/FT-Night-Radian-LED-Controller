@@ -507,7 +507,7 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
 
 // TODO: this needs to be tested. I think the logic checks out with i/j/lerp, but not sure.
 void chase(CRGB color1, CRGB color2, int length) { // color segment that chases through the wings
-  if (currentStep >= wingNavPoint) {
+  if (currentStep >= wingNavPoint + length) {
     currentStep = 0;
   }
 
@@ -515,13 +515,14 @@ void chase(CRGB color1, CRGB color2, int length) { // color segment that chases 
 
   for (int i = 0; i < length; i++) {
     int j = currentStep - i;
-    if (j < 0) {j = currentStep - j;}
-      CRGB fadeColor = color1.lerp8(color2, (255 / length) * i);
-      rightleds[j] = fadeColor;
-      leftleds[j] = fadeColor;
-      if (currentStep < TAIL_LEDS+1) {tailleds[j] = fadeColor;}
-      if (currentStep < NOSE_LEDS+1) {noseleds[j] = fadeColor;}
-      if (currentStep < FUSE_LEDS+1) {fuseleds[j] = fadeColor;}
+    if (j >= 0) {
+      CRGB fadeColor = color1.lerp8(color2, (255 / (length - 1)) * i);
+      if (j < wingNavPoint) {rightleds[j] = fadeColor;
+                             leftleds[j] = fadeColor;}
+      if (j < TAIL_LEDS) {tailleds[j] = fadeColor;}
+      if (j < NOSE_LEDS) {noseleds[j] = fadeColor;}
+      if (j < FUSE_LEDS) {fuseleds[j] = fadeColor;}
+    }
   }
 
   currentStep++;
