@@ -274,6 +274,7 @@ void loop() {
     if (currentCh1 != prevCh1) {
       if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
       currentShow = map(currentCh1, 900, 1900, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
+      currentShow = constrain(currentShow, 0, numActiveShows-1);
       // currentShow = 8;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
     }
@@ -505,7 +506,10 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
   showStrip();
 }
 
-// TODO: this needs to be tested. I think the logic checks out with i/j/lerp, but not sure.
+// TODO: This works. Right now it overshoots the wingNavPoint/led strip lengths, and then wraps around.
+//       I liked the `if (j < 0) {j = wingNavPoint + j;}` (+j because it's negative), but that only works for the wings.
+//       Ideally having some sort of system for having each section on its own wrapping loop, and even being able to have
+//       multiple chase segments "on-screen" at the same time would be really cool.
 void chase(CRGB color1, CRGB color2, int length) { // color segment that chases through the wings
   if (currentStep >= wingNavPoint + length) {
     currentStep = 0;
