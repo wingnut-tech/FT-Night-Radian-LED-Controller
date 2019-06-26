@@ -27,7 +27,7 @@
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
 #define NUM_SHOWS 18
 
-#define CONFIG_VERSION 0x1111 ^ NUM_SHOWS // EEPROM config version (increment this any time the Config struct changes). Dynamically updates when NUM_SHOWS changes.
+#define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes).
 #define CONFIG_START 0 // starting EEPROM address for our config
 
 #define METRIC_CONVERSION 3.3;
@@ -122,11 +122,13 @@ struct Config { // this is the main config struct that holds everything we'd wan
 
 void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
   EEPROM.get(CONFIG_START, config);
+  Serial.println("Loading config...");
   if (config.version != CONFIG_VERSION) {
     // setup defaults
     config.version = CONFIG_VERSION;
     memset(config.enabledShows, true, sizeof(config.enabledShows)); // set all entries of enabledShows to true by default
     config.navlights = true;
+    Serial.println("New config version. Setting defaults...");
     
     saveConfig();
   } else { // only run update if we didn't just make defaults, as saveConfig() already does this
@@ -136,10 +138,13 @@ void loadConfig() { // loads existing config from EEPROM, or if wrong version, s
 
 void saveConfig() { // saves current config to EEPROM
   EEPROM.put(CONFIG_START, config);
+  Serial.println("Saving config...");
   updateShowConfig();
 }
 
 void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}. also sets nav stop point.
+  Serial.print("Config version: ");
+  Serial.println(config.version);
   numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
   for (int i = 0; i < NUM_SHOWS; i++) {
     Serial.print("Show ");
@@ -274,7 +279,8 @@ void loop() {
     if (currentCh1 != prevCh1) {
       if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
       currentShow = map(currentCh1, 900, 1900, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
-      currentShow = constrain(currentShow, 0, numActiveShows-1);
+      // currentShow = constrain(currentShow, 0, numActiveShows-1);
+      currentShow = currentShow % numActiveShows;
       // currentShow = 8;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
     }
