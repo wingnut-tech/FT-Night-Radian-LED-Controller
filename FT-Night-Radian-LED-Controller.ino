@@ -479,6 +479,14 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
   showStrip();
 }
 
+void setFuseLeds(uint8_t led, CRGB color) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1)
+  if (led < NOSE_LEDS) {
+    noseleds[NOSE_LEDS-led-1] = color; // this is if the nose strip is reversed. can't remember if it is or not. otherwise, noseleds[led]
+  } else {
+    fuseleds[led-NOSE_LEDS] = color;
+  }
+}
+
 //               _                 _   _                  
 //    __ _ _ __ (_)_ __ ___   __ _| |_(_) ___  _ __  ___  
 //   / _` | '_ \| | '_ ` _ \ / _` | __| |/ _ \| '_ \/ __| 
@@ -497,31 +505,49 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
   showStrip();
 }
 
-// TODO: This works. Right now it overshoots the wingNavPoint/led strip lengths, and then wraps around.
-//       I liked the `if (j < 0) {j = wingNavPoint + j;}` (+j because it's negative), but that only works for the wings.
-//       Ideally having some sort of system for having each section on its own wrapping loop, and even being able to have
-//       multiple chase segments "on-screen" at the same time would be really cool.
-void chase(CRGB color1, CRGB color2, int length) { // color segment that chases through the wings
-  if (currentStep >= wingNavPoint + length) {
-    currentStep = 0;
-  }
+void chase(CRGB color1, CRGB color2, uint8_t length) { // color segment that chases through the wings
+  static uint8_t currentStepFuse = 0;
+  static uint8_t currentStepTail = 0;
+  //currentStep is for wings
 
-  setColor(color2);
+  if (currentStep >= wingNavPoint) {currentStep = 0;}
+  if (currentStepFuse >= (NOSE_LEDS+FUSE_LEDS)) {currentStepFuse = 0;}
+  if (currentStepTail >= TAIL_LEDS) {currentStepTail = 0;}
 
-  for (int i = 0; i < length; i++) {
-    int j = currentStep - i;
-    if (j >= 0) {
-      CRGB fadeColor = color1.lerp8(color2, (255 / (length - 1)) * i);
-      if (j < wingNavPoint) {rightleds[j] = fadeColor;
-                             leftleds[j] = fadeColor;}
-      if (j < TAIL_LEDS) {tailleds[j] = fadeColor;}
-      if (j < NOSE_LEDS) {noseleds[j] = fadeColor;}
-      if (j < FUSE_LEDS) {fuseleds[j] = fadeColor;}
+  setColor(color2); // sets the base/background color
+
+  for (uint8_t i = 0; i < length; i++) { // this iterates through the "trail", which fades behind the chase point
+    CRGB fadeColor = color1.lerp8(color2, (255 / (length - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
+
+    // these sections just go through each strip, and if we're back at 0, "wraps" the trail around to the end so it's seamless
+    int8_t j = currentStep - i;
+    if (j < 0) {
+      rightleds[wingNavPoint + j] = fadeColor;
+      leftleds[wingNavPoint + j] = fadeColor;
+    } else {
+      rightleds[j] = fadeColor;
+      leftleds[j] = fadeColor;
+    }
+
+    j = currentStepFuse - i;
+    if (j < 0) {
+      setFuseLeds((NOSE_LEDS+FUSE_LEDS) + j, fadeColor);
+    } else {
+      setFuseLeds(j, fadeColor);
+    }
+
+    j = currentStepTail - i;
+    if (j < 0) {
+      tailleds[TAIL_LEDS + j] = fadeColor;
+    } else {
+      tailleds[j] = fadeColor;
     }
   }
 
   currentStep++;
-  interval = 60;
+  currentStepFuse++;
+  currentStepTail++;
+  interval = 50;
   showStrip();
 }
 
