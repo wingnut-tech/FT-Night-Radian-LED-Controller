@@ -32,6 +32,8 @@
 
 #define METRIC_CONVERSION 3.3;
 
+#define caseshow(x,y) case x: y; break;
+
 uint8_t wingNavPoint = NON_NAV_LEDS;
 
 uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show numbers
@@ -122,13 +124,13 @@ struct Config { // this is the main config struct that holds everything we'd wan
 
 void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
   EEPROM.get(CONFIG_START, config);
-  Serial.println("Loading config...");
+  Serial.println(F("Loading config..."));
   if (config.version != CONFIG_VERSION) {
     // setup defaults
     config.version = CONFIG_VERSION;
     memset(config.enabledShows, true, sizeof(config.enabledShows)); // set all entries of enabledShows to true by default
     config.navlights = true;
-    Serial.println("New config version. Setting defaults...");
+    Serial.println(F("New config version. Setting defaults..."));
     
     saveConfig();
   } else { // only run update if we didn't just make defaults, as saveConfig() already does this
@@ -138,33 +140,33 @@ void loadConfig() { // loads existing config from EEPROM, or if wrong version, s
 
 void saveConfig() { // saves current config to EEPROM
   EEPROM.put(CONFIG_START, config);
-  Serial.println("Saving config...");
+  Serial.println(F("Saving config..."));
   updateShowConfig();
 }
 
 void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}. also sets nav stop point.
-  Serial.print("Config version: ");
+  Serial.print(F("Config version: "));
   Serial.println(config.version);
   numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
   for (int i = 0; i < NUM_SHOWS; i++) {
-    Serial.print("Show ");
+    Serial.print(F("Show "));
     Serial.print(i);
-    Serial.print(": ");
+    Serial.print(F(": "));
     if (config.enabledShows[i]) {
-      Serial.println("enabled.");
+      Serial.println(F("enabled."));
       activeShowNumbers[numActiveShows] = i;
       numActiveShows++;
     } else {
-      Serial.println("disabled.");
+      Serial.println(F("disabled."));
     }
   }
-  Serial.print("Navlights: ");
+  Serial.print(F("Navlights: "));
   if (config.navlights) {
     wingNavPoint = NON_NAV_LEDS;
-    Serial.println("on.");
+    Serial.println(F("on."));
   } else {
     wingNavPoint = WING_LEDS;
-    Serial.println("off.");
+    Serial.println(F("off."));
   }
 }
 
@@ -192,7 +194,7 @@ void setup() {
 
   basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
 
-  Serial.print("Base Pressure: ");
+  Serial.print(F("Base Pressure: "));
   Serial.println(basePressure);
 
   pinMode(PROGRAM_CYCLE_BTN, INPUT_PULLUP);
@@ -245,7 +247,7 @@ void loop() {
       //Serial.println(programModeCounter);
       if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
         programMode = false;
-        Serial.println("Exiting program mode");
+        Serial.println(F("Exiting program mode"));
         // store current program values into eeprom
         saveConfig();
         programModeCounter = 0;
@@ -292,7 +294,7 @@ void loop() {
       if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
         programMode = true;
         programModeCounter = 0;
-        Serial.println("Entering program mode");
+        Serial.println(F("Entering program mode"));
         programInit('w'); //strobe the leds to indicate entering program mode
         currentShow = 0;
         programInit(config.enabledShows[currentShow]);
@@ -320,7 +322,7 @@ void loop() {
 
 void stepShow() { // the main menu of different shows
   if (currentShow != prevShow) {
-    Serial.print("Current Show: ");
+    Serial.print(F("Current Show: "));
     Serial.println(currentShow);
     currentStep = 0;
     blank();
@@ -342,40 +344,23 @@ void stepShow() { // the main menu of different shows
   }
 
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
-    case 0: blank(); //all off
-            break;
-    case 1: colorWave1(10, 10);//regular rainbow
-            break;
-    case 2: colorWave1(0, 10); // whole plane solid color rainbow
-            break;
-    case 3: setColor(CRGB::Red);
-            break;
-    case 4: setColor(CRGB::Orange);
-            break;
-    case 5: setColor(CRGB::Yellow);
-            break;
-    case 6: setColor(CRGB::Green);
-            break;
-    case 7: setColor(CRGB::Blue);
-            break;
-    case 8: setColor(CRGB::Indigo);
-            break;
-    case 9: setColor(CRGB::DarkCyan);
-            break;
-    case 10: setColor(CRGB::White);
-            break;
-    case 11: twinkle1(); //twinkle effect
-            break;
-    case 12: strobe(3); //Realistic double strobe alternating between wings
-            break;
-    case 13: strobe(2); //Realistic landing-light style alternating between wings
-            break;
-    case 14: strobe(1); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
-            break;
-    case 15: chase(CRGB::White, CRGB::Black, 5);
-            break;
-    case 16: chase(CRGB::Orange, CRGB::DarkCyan, 6);
-            break;
+    caseshow(0, blank()); //all off
+    caseshow(1, colorWave1(10, 10));//regular rainbow
+    caseshow(2, colorWave1(0, 10)); // whole plane solid color rainbow
+    caseshow(3, setColor(CRGB::Red));
+    caseshow(4, setColor(CRGB::Orange));
+    caseshow(5, setColor(CRGB::Yellow));
+    caseshow(6, setColor(CRGB::Green));
+    caseshow(7, setColor(CRGB::Blue));
+    caseshow(8, setColor(CRGB::Indigo));
+    caseshow(9, setColor(CRGB::DarkCyan));
+    caseshow(10, setColor(CRGB::White));
+    caseshow(11, twinkle1()); //twinkle effect
+    caseshow(12, strobe(3)); //Realistic double strobe alternating between wings
+    caseshow(13, strobe(2)); //Realistic landing-light style alternating between wings
+    caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
+    caseshow(15, chase(CRGB::White, CRGB::Black, 5));
+    caseshow(16, chase(CRGB::Orange, CRGB::DarkCyan, 6));
             /*TODO Chase programs:
             Chase all on but a few off. 
             Chase all off but a few on.
@@ -384,8 +369,7 @@ void stepShow() { // the main menu of different shows
             Chase forward.
             Chase rearward.
              */
-    case 17: altitude(fakeAlt, variometer); // fakeAlt is for testing. Defaults to zero for live data.
-            break;
+    caseshow(17, altitude(fakeAlt, variometer)); // fakeAlt is for testing. Defaults to zero for live data.
   }
   prevShow = currentShow;
 }
@@ -415,6 +399,7 @@ void setColor (CRGB color) {
   fill_solid(noseleds, NOSE_LEDS, color);
   fill_solid(fuseleds, FUSE_LEDS, color);
   fill_solid(tailleds, TAIL_LEDS, color);
+  showStrip();
 }
 
 void setColor (CRGBPalette16 palette) {
@@ -785,11 +770,11 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
     tailleds[i] = ColorFromPalette(palette, vspeedMap);
   }
 
-  Serial.print("Current relative altitude: ");
+  Serial.print(F("Current relative altitude: "));
   Serial.print(currentAlt);
-  Serial.print("   VSpeed:");
+  Serial.print(F("   VSpeed:"));
   Serial.print(vSpeed);
-  Serial.print("   VSpeedMap:");
+  Serial.print(F("   VSpeedMap:"));
   Serial.println(vspeedMap);
   
   prevAlt = currentAlt;
@@ -861,10 +846,10 @@ void twinkle1 () { // Random twinkle effect on all LEDs
 
 void programInit(bool progState) {
   if (progState) {
-    Serial.println("enabled.");
+    Serial.println(F("enabled."));
     programInit('g');
   } else {
-    Serial.println("disabled.");
+    Serial.println(F("disabled."));
     programInit('r');
   }
 }
