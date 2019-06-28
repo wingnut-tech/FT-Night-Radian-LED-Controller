@@ -283,7 +283,7 @@ void loop() {
       currentShow = map(currentCh1, 900, 1900, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
       // currentShow = constrain(currentShow, 0, numActiveShows-1);
       currentShow = currentShow % numActiveShows;
-      // currentShow = 8;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
+      //currentShow = 17;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
     }
     
@@ -796,11 +796,11 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
     tailleds[i] = ColorFromPalette(palette, vspeedMap);
   }
 
-  Serial.print(F("Current relative altitude: "));
+  Serial.print(F("Current relative altitude:  "));
   Serial.print(currentAlt);
-  Serial.print(F("   VSpeed:"));
+  Serial.print(F("\t\tVSpeed: "));
   Serial.print(vSpeed);
-  Serial.print(F("   VSpeedMap:"));
+  Serial.print(F("\tVSpeedMap: "));
   Serial.println(vspeedMap);
   
   prevAlt = currentAlt;
