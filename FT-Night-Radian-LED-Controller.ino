@@ -27,7 +27,7 @@
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
 #define NUM_SHOWS 18
 
-#define CONFIG_VERSION 0xAA01 // EEPROM config version (increment this any time the Config struct changes).
+#define CONFIG_VERSION 0xAA02 // EEPROM config version (increment this any time the Config struct changes).
 #define CONFIG_START 0 // starting EEPROM address for our config
 
 #define METRIC_CONVERSION 3.3;
@@ -108,6 +108,11 @@ DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(
 118,    255,255,255, //White
 138,    255,255,255, //White
 255,    0,255,0 }; //Green
+
+DEFINE_GRADIENT_PALETTE( USA ) {           //RGB(255,0,0) RGB(255,255,255) RGB(0,0,255)
+  0,   255,0,  0,   //red
+128,   255,255,255,   //white
+255,   0,0,255 }; //blue
 
 
 //   ___  ___ _ __  _ __ ___  _ __ ___  
@@ -361,6 +366,7 @@ void stepShow() { // the main menu of different shows
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
     caseshow(15, chase(CRGB::White, CRGB::Black, 5));
     caseshow(16, chase(CRGB::Orange, CRGB::DarkCyan, 6));
+    caseshow(17, animateColor(USA, 6, 1));
             /*TODO Chase programs:
             Chase all on but a few off. 
             Chase all off but a few on.
@@ -369,7 +375,7 @@ void stepShow() { // the main menu of different shows
             Chase forward.
             Chase rearward.
              */
-    caseshow(17, altitude(fakeAlt, variometer)); // fakeAlt is for testing. Defaults to zero for live data.
+    caseshow(18, altitude(fakeAlt, variometer)); // fakeAlt is for testing. Defaults to zero for live data.
   }
   prevShow = currentShow;
 }
