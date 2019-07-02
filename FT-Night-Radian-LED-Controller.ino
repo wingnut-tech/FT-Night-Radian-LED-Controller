@@ -25,9 +25,9 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
-#define NUM_SHOWS 18
+#define NUM_SHOWS 19
 
-#define CONFIG_VERSION 0xAA02 // EEPROM config version (increment this any time the Config struct changes).
+#define CONFIG_VERSION 0xAA03 // EEPROM config version (increment this any time the Config struct changes).
 #define CONFIG_START 0 // starting EEPROM address for our config
 
 #define METRIC_CONVERSION 3.3;
@@ -123,8 +123,8 @@ DEFINE_GRADIENT_PALETTE( USA ) {           //RGB(255,0,0) RGB(255,255,255) RGB(0
 
 struct Config { // this is the main config struct that holds everything we'd want to save/load from EEPROM
   uint16_t version;
-  bool enabledShows[NUM_SHOWS];
   bool navlights;
+  bool enabledShows[NUM_SHOWS];
 } config;
 
 void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
@@ -272,7 +272,9 @@ void loop() {
     } else {
       if (enableCounter > 0 && enableCounter < 1000) { // momentary press to toggle the current show
         //toggle the state of the current program, currState = !currState
-        config.enabledShows[currentShow] = !config.enabledShows[currentShow];
+        if (config.enabledShows[currentShow] == true) {config.enabledShows[currentShow] = false;}
+        else {config.enabledShows[currentShow] = true;}
+        // config.enabledShows[currentShow] = !config.enabledShows[currentShow];
         programInit(config.enabledShows[currentShow]);
       }
       enableCounter = 0;
@@ -307,7 +309,9 @@ void loop() {
     } else if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) {
       programModeCounter = programModeCounter + (currentMillis - progMillis);
       if (programModeCounter > 3000) {
-        config.navlights = !config.navlights;
+        if (config.navlights == true) {config.navlights = false;}
+        else {config.navlights = true;}
+        // config.navlights = !config.navlights;
         saveConfig();
         programModeCounter = 0;
       }
@@ -559,7 +563,7 @@ void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
       setFuseLeds(j, fadeColor);
     }
   }
-  
+
   for (uint8_t i = 0; i < lengthTail; i++) {
     fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i);
 
