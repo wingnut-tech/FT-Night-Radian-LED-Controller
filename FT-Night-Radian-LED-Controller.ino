@@ -3,20 +3,26 @@
 #include <FastLED.h>
 #include <Adafruit_BMP280.h>
 #include <EEPROM.h>
+
 // define number of LEDs in specific strings
-#define WING_LEDS 31
-#define NON_NAV_LEDS 20
-#define FUSE_LEDS 18
-#define NOSE_LEDS 4
-#define TAIL_LEDS 8
+
+#define WING_LEDS 31 // total wing LEDs
+#define NON_NAV_LEDS 20 // wing LEDs that aren't navlights
+#define FUSE_LEDS 18 // total fuselage LEDs
+#define NOSE_LEDS 4 // total nose LEDs
+#define TAIL_LEDS 8 // total tail LEDs
+
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
-//#define TMP_BRIGHTNESS 55
+
+//#define TMP_BRIGHTNESS 55 // uncomment to override brightness for testing
+
 #define MAX_ALTIMETER 400
 #define PROGRAM_CYCLE_BTN 6
 #define PROGRAM_ENABLE_BTN 7
 
 // define the pins that the LED strings are connected to
+
 #define TAIL_PIN 8
 #define FUSE_PIN 9
 #define NOSE_PIN 10
@@ -25,21 +31,21 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
-#define NUM_SHOWS 19
+#define NUM_SHOWS 19 // total number of shows. 1+the last caseshow number
 
 #define CONFIG_VERSION 0xAA03 // EEPROM config version (increment this any time the Config struct changes).
 #define CONFIG_START 0 // starting EEPROM address for our config
 
-#define METRIC_CONVERSION 3.3;
+#define METRIC_CONVERSION 3.3; // 3.3 to convert meters to feet. 1 for meters.
 
-#define caseshow(x,y) case x: y; break;
+#define caseshow(x,y) case x: y; break; // macro for switchcases with a built-in break
 
 uint8_t wingNavPoint = NON_NAV_LEDS;
 
-uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show numbers
+uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show switchcase numbers
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
-float basePressure;
+float basePressure; // gets initialized with ground level pressure on startup
 double fakeAlt = 0;
 
 int currentCh1 = 0;  // Receiver Channel PPM value
@@ -193,9 +199,9 @@ void setup() {
   bmp.begin(0x76); // initialize the altitude pressure sensor with I2C address 0x76
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X16,     /* Pressure oversampling */
+                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X4,       /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_63); /* Standby time. */
+                  Adafruit_BMP280::STANDBY_MS_63);  /* Standby time. */
 
   basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
 
@@ -271,10 +277,9 @@ void loop() {
       enableCounter = enableCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
     } else {
       if (enableCounter > 0 && enableCounter < 1000) { // momentary press to toggle the current show
-        //toggle the state of the current program, currState = !currState
+        // toggle the state of the current program on/off
         if (config.enabledShows[currentShow] == true) {config.enabledShows[currentShow] = false;}
         else {config.enabledShows[currentShow] = true;}
-        // config.enabledShows[currentShow] = !config.enabledShows[currentShow];
         programInit(config.enabledShows[currentShow]);
       }
       enableCounter = 0;
@@ -284,11 +289,10 @@ void loop() {
     // Read in the length of the signal in microseconds
     prevCh1 = currentCh1;
     currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
-    // currentCh1 = 900;
+    // currentCh1 = 900; // for testing
     if (currentCh1 != prevCh1) {
       if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
       currentShow = map(currentCh1, 900, 1900, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
-      // currentShow = constrain(currentShow, 0, numActiveShows-1);
       currentShow = currentShow % numActiveShows;
       //currentShow = 17;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
@@ -297,7 +301,6 @@ void loop() {
     // Are we entering program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-      //Serial.println(programModeCounter);
       if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
         programMode = true;
         programModeCounter = 0;
@@ -309,9 +312,9 @@ void loop() {
     } else if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) {
       programModeCounter = programModeCounter + (currentMillis - progMillis);
       if (programModeCounter > 3000) {
+        // toggle the navlights on/off
         if (config.navlights == true) {config.navlights = false;}
         else {config.navlights = true;}
-        // config.navlights = !config.navlights;
         saveConfig();
         programModeCounter = 0;
       }
@@ -336,12 +339,7 @@ void stepShow() { // the main menu of different shows
     currentStep = 0;
     blank();
     if (programMode) {
-      //Look up whether this currentShow is enabled or disabled, and flash the LEDs accordingly
-      if (config.enabledShows[currentShow]) { // this should now check EEPROM config
-        programInit('g'); //flash all LEDs green to indicate current show is enabled
-      } else {
-        programInit('r'); //flash all LEDs red to indicate current show is disabled
-      }
+      programInit(config.enabledShows[currentShow]); //flash all LEDs red/green to indicate current show status
     }
   }
 
@@ -391,7 +389,7 @@ void stepShow() { // the main menu of different shows
 //  |_| |_|\___|_| .__/ \___|_|    |_|  \__,_|_| |_|\___|\__|_|\___/|_| |_|___/ 
 //               |_|                                                            
 
-void showStrip () {
+void showStrip () { // wrapper for FastLED.show()
   #ifdef TMP_BRIGHTNESS
   FastLED.setBrightness(TMP_BRIGHTNESS);
   #endif
@@ -403,7 +401,7 @@ void blank() { // Turn off all LEDs
   showStrip();
 }
 
-void setColor (CRGB color) {
+void setColor (CRGB color) { // sets all LEDs to a solid color
   fill_solid(rightleds, wingNavPoint, color);
   fill_solid(leftleds, wingNavPoint, color);
   fill_solid(noseleds, NOSE_LEDS, color);
@@ -412,7 +410,7 @@ void setColor (CRGB color) {
   showStrip();
 }
 
-void setColor (CRGBPalette16 palette) {
+void setColor (CRGBPalette16 palette) { // spreads a palette across all LEDs
   for (int i; i < wingNavPoint; i++) {
     rightleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
     leftleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
@@ -443,7 +441,7 @@ CRGB LetterToColor (char letter) { // Convert the letters in the static patterns
   return color;
 }
 
-void setPattern (char pattern[]) {
+void setPattern (char pattern[]) { // sets wings to a static pattern
   for (int i = 0; i < wingNavPoint; i++) {
     rightleds[i] = LetterToColor(pattern[i]);
     leftleds[i] = LetterToColor(pattern[i]);
@@ -452,7 +450,7 @@ void setPattern (char pattern[]) {
   showStrip();
 }
 
-void setInitPattern () {
+void setInitPattern () { // set all LEDs to the static init pattern
   for (int i = 0; i < WING_LEDS; i++) {
     rightleds[i] = LetterToColor(init_rightwing[i]);
   }
@@ -476,7 +474,7 @@ void setInitPattern () {
   showStrip();
 }
 
-void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
+void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) { // animates a palette across all LEDs
   if (currentStep > 255) {currentStep = 0;}
   for (uint8_t i = 0; i < wingNavPoint; i++) {
     int j = triwave8((i * ledOffset) + currentStep);
@@ -498,7 +496,7 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
 
 void setFuseLeds(uint8_t led, CRGB color) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1)
   if (led < NOSE_LEDS) {
-    noseleds[led] = color; // this is if the nose strip is reversed. can't remember if it is or not. otherwise, noseleds[led]
+    noseleds[led] = color;
   } else {
     fuseleds[led-NOSE_LEDS] = color;
   }
@@ -510,7 +508,7 @@ void setFuseLeds(uint8_t led, CRGB color) { // sets leds along nose and fuse as 
 //  | (_| | | | | | | | | | | (_| | |_| | (_) | | | \__ \ 
 //   \__,_|_| |_|_|_| |_| |_|\__,_|\__|_|\___/|_| |_|___/ 
 
-void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on wings and fuselage
+void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   if (currentStep > 255) {currentStep = 0;}
   for (uint8_t i = 0; i < wingNavPoint; i++) {
     rightleds[i] = CHSV(currentStep + (ledOffset * i), 255, 255);
@@ -527,7 +525,7 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
   showStrip();
 }
 
-void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) { // color segment that chases through the wings
+void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) { // color segment that chases in one direction, wrapping around
   static uint8_t currentStepFuse = 0;
   static uint8_t currentStepTail = 0;
   //currentStep is for wings
@@ -589,6 +587,7 @@ void cylon(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
 
   static int8_t currentStepFuse = 0;
   static int8_t currentStepTail = 0;
+  //currentStep is used for wings
 
   setColor(color2); // sets the base/background color
 
@@ -632,7 +631,7 @@ void cylon(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
   }
 
   for (int8_t i = (lengthFuse - 1); i >= 0; i--) {
-    fadeColor = color1.lerp8(color2, (255 / (lengthFuse - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
+    fadeColor = color1.lerp8(color2, (255 / (lengthFuse - 1)) * i);
 
     j = currentStepFuse - (i * directionFuse);
     if (j < 0) {j = -j;}
@@ -641,7 +640,7 @@ void cylon(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
   }
 
   for (int8_t i = (lengthTail - 1); i >= 0; i--) {
-    fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
+    fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i);
 
     j = currentStepTail - (i * directionTail);
     if (j < 0) {j = -j;}
@@ -826,11 +825,7 @@ void strobe(int style) { // Various strobe patterns (duh)
   }
 }
 
-// TODO: Do a full flight test to make sure this function still works properly.
-//       Also, clean up the commented code? Not sure if it might be needed again.
-void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
-  // static int majorAlt;
-  // static int minorAlt;
+void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. wings fill up to indicate altitude, tail goes green/red as variometer
   static double prevAlt;
   static int avgVSpeed[] = {0,0,0,0};
 
@@ -840,34 +835,8 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
   double currentAlt;
 
   currentAlt = bmp.readAltitude(basePressure)*METRIC_CONVERSION;
-  //if (currentAlt < 0) {currentAlt = 0;}
   
   if (fake != 0) {currentAlt = fake;}
-
-  /*  majorAlt = floor(currentAlt/100.0)*3;
-  //Serial.println(majorAlt);
-  minorAlt = int(currentAlt) % 100;
-  minorAlt = map(minorAlt, 0, 100, 0, wingNavPoint);
-  
-  for (int i=0; i < minorAlt; i++) {
-    rightleds[i] = CRGB::White;
-    leftleds[i] = CRGB::White;
-  }
-  for (int i=minorAlt+1; i <= FUSE_LEDS; i++) {
-    rightleds[i] = CRGB::Black;
-    leftleds[i] = CRGB::Black;
-  }
-
-  for (int i=0; i < majorAlt; i++) {
-    fuseleds[i-2] = CRGB::White;
-    fuseleds[i-1] = CRGB::White;
-    fuseleds[i] = CRGB::White;
-  }
-  for (int i=majorAlt+1; i < FUSE_LEDS; i++) {
-    fuseleds[i-2] = CRGB::Black;
-    fuseleds[i-1] = CRGB::Black;
-    fuseleds[i] = CRGB::Black;
-  }*/
 
   //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
   if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
@@ -914,7 +883,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show.
 }
 
 enum {SteadyDim, Dimming, Brightening};
-void doTwinkle1(struct CRGB * ledArray, uint8_t * pixelState, uint8_t size) {
+void doTwinkle1(struct CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper function for the twinkle show
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
@@ -975,7 +944,7 @@ void twinkle1 () { // Random twinkle effect on all LEDs
   showStrip();
 }
 
-void programInit(bool progState) {
+void programInit(bool progState) { // takes a bool and flashes red/green depending on true or not
   if (progState) {
     Serial.println(F("enabled."));
     programInit('g');
@@ -985,7 +954,7 @@ void programInit(bool progState) {
   }
 }
 
-void programInit(char progState) {
+void programInit(char progState) { // flashes red/green/white for different program mode indicators
   CRGB color;
   switch (progState) {
     case 'w':
@@ -999,7 +968,7 @@ void programInit(char progState) {
       break;
   }
   static bool StrobeState = true;
-  for (int j = 0; j < 10; j++) {
+  for (int j = 0; j < 7; j++) {
       if (StrobeState) {
         for (int i = 0; i < wingNavPoint; i++) {
           rightleds[i] = color;
