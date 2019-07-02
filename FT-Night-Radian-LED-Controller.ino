@@ -474,10 +474,17 @@ void setInitPattern () {
 
 void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
   if (currentStep > 255) {currentStep = 0;}
-  for (int i = 0; i < wingNavPoint; i++) {
-      int j = triwave8((i * ledOffset) + currentStep);
-      rightleds[i] = ColorFromPalette(palette, scale8(j, 240));
-      leftleds[i] = ColorFromPalette(palette, scale8(j, 240));
+  for (uint8_t i = 0; i < wingNavPoint; i++) {
+    int j = triwave8((i * ledOffset) + currentStep);
+    CRGB color = ColorFromPalette(palette, scale8(j, 240));
+    rightleds[i] = color;
+    leftleds[i] = color;
+  }
+  for (uint8_t i = 0; i < (NOSE_LEDS+FUSE_LEDS); i++) {
+    int j = triwave8((i * ledOffset) + currentStep);
+    CRGB color = ColorFromPalette(palette, scale8(j, 240));
+    setFuseLeds(j, color);
+    if (i < TAIL_LEDS) { tailleds[i] = color; }
   }
 
   currentStep += stepSize;
@@ -501,10 +508,15 @@ void setFuseLeds(uint8_t led, CRGB color) { // sets leds along nose and fuse as 
 
 void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on wings and fuselage
   if (currentStep > 255) {currentStep = 0;}
-  for (int j = 0; j < wingNavPoint; j++) {
-    rightleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);
-    leftleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);
-    if (j < FUSE_LEDS) {fuseleds[j] = CHSV(currentStep + (ledOffset * j), 255, 255);}
+  for (uint8_t i = 0; i < wingNavPoint; i++) {
+    rightleds[i] = CHSV(currentStep + (ledOffset * i), 255, 255);
+    leftleds[i] = CHSV(currentStep + (ledOffset * i), 255, 255);
+  }
+  for (uint8_t i = 0; i < (NOSE_LEDS+FUSE_LEDS); i++) {
+    setFuseLeds(i, CHSV(currentStep + (ledOffset * i), 255, 255))
+  }
+  for (uint8_t i = 0; i < TAIL_LEDS; i++) {
+    tailleds[i] = CHSV(currentStep + (ledOffset * i), 255, 255);
   }
   currentStep++;
   interval = l_interval;
@@ -536,6 +548,7 @@ void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
       leftleds[j] = fadeColor;
     }
   }
+
   for (uint8_t i = 0; i < lengthFuse; i++) {
     fadeColor = color1.lerp8(color2, (255 / (lengthFuse - 1)) * i);
 
@@ -546,6 +559,7 @@ void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
       setFuseLeds(j, fadeColor);
     }
   }
+  
   for (uint8_t i = 0; i < lengthTail; i++) {
     fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i);
 
