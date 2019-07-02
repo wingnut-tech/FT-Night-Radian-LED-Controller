@@ -364,8 +364,8 @@ void stepShow() { // the main menu of different shows
     caseshow(12, strobe(3)); //Realistic double strobe alternating between wings
     caseshow(13, strobe(2)); //Realistic landing-light style alternating between wings
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
-    caseshow(15, chase(CRGB::White, CRGB::Black, 5));
-    caseshow(16, chase(CRGB::Orange, CRGB::DarkCyan, 6));
+    caseshow(15, chase(CRGB::White, CRGB::Black, 8, 7, 3, 50));
+    caseshow(16, cylon(CRGB::Orange, CRGB::DarkCyan, 8, 7, 3, 50));
     caseshow(17, animateColor(USA, 6, 1));
             /*TODO Chase programs:
             Chase all on but a few off. 
@@ -487,7 +487,7 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) {
 
 void setFuseLeds(uint8_t led, CRGB color) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1)
   if (led < NOSE_LEDS) {
-    noseleds[NOSE_LEDS-led-1] = color; // this is if the nose strip is reversed. can't remember if it is or not. otherwise, noseleds[led]
+    noseleds[led] = color; // this is if the nose strip is reversed. can't remember if it is or not. otherwise, noseleds[led]
   } else {
     fuseleds[led-NOSE_LEDS] = color;
   }
@@ -511,7 +511,7 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern on 
   showStrip();
 }
 
-void chase(CRGB color1, CRGB color2, uint8_t length) { // color segment that chases through the wings
+void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) { // color segment that chases through the wings
   static uint8_t currentStepFuse = 0;
   static uint8_t currentStepTail = 0;
   //currentStep is for wings
@@ -522,11 +522,12 @@ void chase(CRGB color1, CRGB color2, uint8_t length) { // color segment that cha
 
   setColor(color2); // sets the base/background color
 
-  for (uint8_t i = 0; i < length; i++) { // this iterates through the "trail", which fades behind the chase point
-    CRGB fadeColor = color1.lerp8(color2, (255 / (length - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
+  int8_t j;
+  CRGB fadeColor;
+  for (uint8_t i = 0; i < lengthWing; i++) { // this iterates through the "trail", which fades behind the chase point
+    fadeColor = color1.lerp8(color2, (255 / (lengthWing - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
 
-    // these sections just go through each strip, and if we're back at 0, "wraps" the trail around to the end so it's seamless
-    int8_t j = currentStep - i;
+    j = currentStep - i;
     if (j < 0) {
       rightleds[wingNavPoint + j] = fadeColor;
       leftleds[wingNavPoint + j] = fadeColor;
@@ -534,6 +535,9 @@ void chase(CRGB color1, CRGB color2, uint8_t length) { // color segment that cha
       rightleds[j] = fadeColor;
       leftleds[j] = fadeColor;
     }
+  }
+  for (uint8_t i = 0; i < lengthFuse; i++) {
+    fadeColor = color1.lerp8(color2, (255 / (lengthFuse - 1)) * i);
 
     j = currentStepFuse - i;
     if (j < 0) {
@@ -541,6 +545,9 @@ void chase(CRGB color1, CRGB color2, uint8_t length) { // color segment that cha
     } else {
       setFuseLeds(j, fadeColor);
     }
+  }
+  for (uint8_t i = 0; i < lengthTail; i++) {
+    fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i);
 
     j = currentStepTail - i;
     if (j < 0) {
@@ -553,7 +560,81 @@ void chase(CRGB color1, CRGB color2, uint8_t length) { // color segment that cha
   currentStep++;
   currentStepFuse++;
   currentStepTail++;
-  interval = 50;
+  interval = l_interval;
+  showStrip();
+}
+
+void cylon(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) {
+  static int8_t direction = 1;
+  static int8_t directionFuse = 1;
+  static int8_t directionTail = 1;
+
+  static int8_t currentStepFuse = 0;
+  static int8_t currentStepTail = 0;
+
+  setColor(color2); // sets the base/background color
+
+  if (currentStep >= wingNavPoint) {
+    currentStep = wingNavPoint - 1;
+    direction = -1;
+  }
+  if (currentStep < 0) {
+    currentStep = 1;
+    direction = 1;
+  }
+
+  if (currentStepFuse >= (NOSE_LEDS+FUSE_LEDS)) {
+    currentStepFuse = (NOSE_LEDS+FUSE_LEDS) - 1;
+    directionFuse = -1;
+  }
+  if (currentStepFuse < 0) {
+    currentStepFuse = 1;
+    directionFuse = 1;
+  }
+
+  if (currentStepTail >= TAIL_LEDS) {
+    currentStepTail = TAIL_LEDS - 1;
+    directionTail = -1;
+  }
+  if (currentStepTail < 0) {
+    currentStepTail = 1;
+    directionTail = 1;
+  }
+
+  int8_t j;
+  CRGB fadeColor;
+  for (int8_t i = (lengthWing - 1); i >= 0; i--) {
+    fadeColor = color1.lerp8(color2, (255 / (lengthWing - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
+
+    j = currentStep - (i * direction);
+    if (j < 0) {j = -j;}
+    if (j > (wingNavPoint - 1)) {j = wingNavPoint - i;}
+    rightleds[j] = fadeColor;
+    leftleds[j] = fadeColor;
+  }
+
+  for (int8_t i = (lengthFuse - 1); i >= 0; i--) {
+    fadeColor = color1.lerp8(color2, (255 / (lengthFuse - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
+
+    j = currentStepFuse - (i * directionFuse);
+    if (j < 0) {j = -j;}
+    if (j > ((NOSE_LEDS+FUSE_LEDS) - 1)) {j = (NOSE_LEDS+FUSE_LEDS) - i;}
+    setFuseLeds(j, fadeColor);
+  }
+
+  for (int8_t i = (lengthTail - 1); i >= 0; i--) {
+    fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
+
+    j = currentStepTail - (i * directionTail);
+    if (j < 0) {j = -j;}
+    if (j > (TAIL_LEDS - 1)) {j = TAIL_LEDS - i;}
+    tailleds[j] = fadeColor;
+  }
+
+  currentStep += direction;
+  currentStepFuse += directionFuse;
+  currentStepTail += directionTail;
+  interval = l_interval;
   showStrip();
 }
 
