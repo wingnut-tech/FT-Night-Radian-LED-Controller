@@ -369,7 +369,7 @@ void stepShow() { // the main menu of different shows
     caseshow(12, strobe(3)); //Realistic double strobe alternating between wings
     caseshow(13, strobe(2)); //Realistic landing-light style alternating between wings
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
-    caseshow(15, chase(CRGB::White, CRGB::Black, 8, 7, 3, 50));
+    caseshow(15, chase(CRGB::Orange, CRGB::DarkTurquoise, 50, 35, 80));
     caseshow(16, cylon(CRGB::Orange, CRGB::DarkCyan, 15, 15, 30));
     caseshow(17, animateColor(USA, 6, 1));
             /*TODO Chase programs:
@@ -528,7 +528,8 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   showStrip();
 }
 
-void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) { // color segment that chases in one direction, wrapping around
+/*
+void oldchase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) { // color segment that chases in one direction, wrapping around
   static uint8_t currentStepFuse = 0;
   static uint8_t currentStepTail = 0;
   //currentStep is for wings
@@ -582,22 +583,59 @@ void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
   interval = l_interval;
   showStrip();
 }
+*/
+
+void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
+  chase(color1, color2, speedWing, speedFuse, speedTail, false);
+}
 
 void cylon(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
-  for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].lerp8(color2, 10);
-                                              leftleds[i] = leftleds[i].lerp8(color2, 10);}
-  for (uint8_t i = 0; i < fuseNavPoint; i++) {fuseleds[i] = fuseleds[i].lerp8(color2, 10);}
-  for (uint8_t i = 0; i < NOSE_LEDS; i++) {noseleds[i] = noseleds[i].lerp8(color2, 10);}
-  for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].lerp8(color2, 10);}
+  chase(color1, color2, speedWing, speedFuse, speedTail, true);
+}
 
-  rightleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
-  leftleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
-  setFuseLeds(scale8(sin8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
-  tailleds[scale8(sin8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
+void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail, bool cylon) {
+  if (color2 == (CRGB)CRGB::Black) {
+    for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].nscale8(192);
+                                                leftleds[i] = leftleds[i].nscale8(192);}
+    for (uint8_t i = 0; i < fuseNavPoint; i++) {fuseleds[i] = fuseleds[i].nscale8(192);}
+    for (uint8_t i = 0; i < NOSE_LEDS; i++) {noseleds[i] = noseleds[i].nscale8(192);}
+    for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].nscale8(192);}
+  } else {
+    for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].lerp8(color2, 20);
+                                                leftleds[i] = leftleds[i].lerp8(color2, 20);}
+    for (uint8_t i = 0; i < fuseNavPoint; i++) {fuseleds[i] = fuseleds[i].lerp8(color2, 20);}
+    for (uint8_t i = 0; i < NOSE_LEDS; i++) {noseleds[i] = noseleds[i].lerp8(color2, 20);}
+    for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].lerp8(color2, 20);}
+  }
+
+  if (cylon == true) {
+    rightleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
+    leftleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
+    setFuseLeds(scale8(sin8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
+    tailleds[scale8(sin8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
+  } else {
+    rightleds[scale8(beat8(speedWing), wingNavPoint-1)] = color1;
+    leftleds[scale8(beat8(speedWing), wingNavPoint-1)] = color1;
+    setFuseLeds(scale8(beat8(speedFuse), (NOSE_LEDS+FUSE_LEDS)-1), color1);
+    tailleds[scale8(beat8(speedTail), TAIL_LEDS-1)] = color1;
+  }
 
   interval = 10;
   showStrip();
 }
+
+// void cylon(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
+//   for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].lerp8(color2, 10);
+//                                               leftleds[i] = leftleds[i].lerp8(color2, 10);}
+//   for (uint8_t i = 0; i < fuseNavPoint; i++) {fuseleds[i] = fuseleds[i].lerp8(color2, 10);}
+//   for (uint8_t i = 0; i < NOSE_LEDS; i++) {noseleds[i] = noseleds[i].lerp8(color2, 10);}
+//   for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].lerp8(color2, 10);}
+
+
+
+//   interval = 10;
+//   showStrip();
+// }
 
 void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helper function for the nav lights
   for (uint8_t i = wingNavPoint; i < WING_LEDS; i++) {
