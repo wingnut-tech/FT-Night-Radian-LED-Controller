@@ -478,7 +478,7 @@ void setInitPattern () { // set all LEDs to the static init pattern
 }
 
 void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) { // animates a palette across all LEDs
-  if (currentStep > 255) {currentStep = 0;}
+  if (currentStep > 255) {currentStep -= 255;}
   for (uint8_t i = 0; i < wingNavPoint; i++) {
     int j = triwave8((i * ledOffset) + currentStep);
     CRGB color = ColorFromPalette(palette, scale8(j, 240));
@@ -488,7 +488,7 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) { // anim
   for (uint8_t i = 0; i < (NOSE_LEDS+fuseNavPoint); i++) {
     int j = triwave8((i * ledOffset) + currentStep);
     CRGB color = ColorFromPalette(palette, scale8(j, 240));
-    setFuseLeds(j, color);
+    setFuseLeds(i, color);
     if (i < TAIL_LEDS) { tailleds[i] = color; }
   }
 
@@ -584,114 +584,20 @@ void chase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uin
 }
 
 void cylon(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
-  static uint8_t currentStepFuse = 0;
-  static uint8_t currentStepTail = 0;
-  //currentStep is for wings
-
-
-  for (uint8_t i = 0; i < wingNavPoint; i++) {
-    rightleds[i] = rightleds[i].lerp8(color2, 10);
-    leftleds[i] = leftleds[i].lerp8(color2, 10);
-  }
-  for (uint8_t i = 0; i < fuseNavPoint; i++) {
-    rightleds[i] = rightleds[i].lerp8(color2, 10);
-  }
-  for (uint8_t i = 0; i < NOSE_LEDS; i++) {
-    noseleds[i] = noseleds[i].lerp8(color2, 10);
-  }
-  for (uint8_t i = 0; i < TAIL_LEDS; i++) {
-    tailleds[i] = tailleds[i].lerp8(color2, 10);
-  }
+  for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].lerp8(color2, 10);
+                                              leftleds[i] = leftleds[i].lerp8(color2, 10);}
+  for (uint8_t i = 0; i < fuseNavPoint; i++) {fuseleds[i] = fuseleds[i].lerp8(color2, 10);}
+  for (uint8_t i = 0; i < NOSE_LEDS; i++) {noseleds[i] = noseleds[i].lerp8(color2, 10);}
+  for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].lerp8(color2, 10);}
 
   rightleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
   leftleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
   setFuseLeds(scale8(sin8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
   tailleds[scale8(sin8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
 
-  if (++currentStep == 256) {currentStep = 0;}
-  currentStepFuse++;
-  currentStepTail++;
-  //currentStep fuse/tail will wrap at 255 on their own
   interval = 10;
   showStrip();
 }
-
-/*
-void oldcylon(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) {
-  static int8_t direction = 1;
-  static int8_t directionFuse = 1;
-  static int8_t directionTail = 1;
-
-  static int8_t currentStepFuse = 0;
-  static int8_t currentStepTail = 0;
-  //currentStep is used for wings
-
-  setColor(color2); // sets the base/background color
-
-  if (currentStep >= wingNavPoint) {
-    currentStep = wingNavPoint - 1;
-    direction = -1;
-  }
-  if (currentStep < 0) {
-    currentStep = 1;
-    direction = 1;
-  }
-
-  if (currentStepFuse >= (NOSE_LEDS+fuseNavPoint)) {
-    currentStepFuse = (NOSE_LEDS+fuseNavPoint) - 1;
-    directionFuse = -1;
-  }
-  if (currentStepFuse < 0) {
-    currentStepFuse = 1;
-    directionFuse = 1;
-  }
-
-  if (currentStepTail >= TAIL_LEDS) {
-    currentStepTail = TAIL_LEDS - 1;
-    directionTail = -1;
-  }
-  if (currentStepTail < 0) {
-    currentStepTail = 1;
-    directionTail = 1;
-  }
-
-  int8_t j;
-  CRGB fadeColor;
-  for (int8_t i = (lengthWing - 1); i >= 0; i--) {
-    fadeColor = color1.lerp8(color2, (255 / (lengthWing - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
-
-    j = currentStep - (i * direction);
-    if (j < 0) {j = -j;}
-    if (j > (wingNavPoint - 1)) {j = wingNavPoint - i;}
-    rightleds[j] = fadeColor;
-    leftleds[j] = fadeColor;
-  }
-
-  for (int8_t i = (lengthFuse - 1); i >= 0; i--) {
-    fadeColor = color1.lerp8(color2, (255 / (lengthFuse - 1)) * i);
-
-    j = currentStepFuse - (i * directionFuse);
-    if (j < 0) {j = -j;}
-    if (j > ((NOSE_LEDS+fuseNavPoint) - 1)) {j = (NOSE_LEDS+fuseNavPoint) - i;}
-    setFuseLeds(j, fadeColor);
-  }
-
-  for (int8_t i = (lengthTail - 1); i >= 0; i--) {
-    fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i);
-
-    j = currentStepTail - (i * directionTail);
-    if (j < 0) {j = -j;}
-    if (j > (TAIL_LEDS - 1)) {j = TAIL_LEDS - i;}
-    tailleds[j] = fadeColor;
-  }
-
-  currentStep += direction;
-  currentStepFuse += directionFuse;
-  currentStepTail += directionTail;
-  interval = l_interval;
-  showStrip();
-}
-*/
 
 void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helper function for the nav lights
   for (uint8_t i = wingNavPoint; i < WING_LEDS; i++) {
