@@ -609,10 +609,10 @@ void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8
   }
 
   if (cylon == true) {
-    rightleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
-    leftleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
-    setFuseLeds(scale8(sin8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
-    tailleds[scale8(sin8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
+    rightleds[scale8(triwave8(beat8(speedWing)), wingNavPoint-1)] = color1;
+    leftleds[scale8(triwave8(beat8(speedWing)), wingNavPoint-1)] = color1;
+    setFuseLeds(scale8(triwave8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
+    tailleds[scale8(triwave8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
   } else {
     rightleds[scale8(beat8(speedWing), wingNavPoint-1)] = color1;
     leftleds[scale8(beat8(speedWing), wingNavPoint-1)] = color1;
