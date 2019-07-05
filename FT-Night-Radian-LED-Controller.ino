@@ -31,7 +31,7 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
-#define NUM_SHOWS 19 // total number of shows. 1+the last caseshow number
+#define NUM_SHOWS 20 // total number of shows. 1+the last caseshow number
 
 #define CONFIG_VERSION 0xAA03 // EEPROM config version (increment this any time the Config struct changes).
 #define CONFIG_START 0 // starting EEPROM address for our config
@@ -371,7 +371,8 @@ void stepShow() { // the main menu of different shows
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
     caseshow(15, chase(CRGB::Orange, CRGB::DarkTurquoise, 50, 35, 80));
     caseshow(16, cylon(CRGB::Orange, CRGB::DarkCyan, 15, 15, 30));
-    caseshow(17, animateColor(USA, 6, 1));
+    caseshow(17, juggle(4, 8));
+    caseshow(18, animateColor(USA, 6, 1));
             /*TODO Chase programs:
             Chase all on but a few off. 
             Chase all off but a few on.
@@ -380,7 +381,7 @@ void stepShow() { // the main menu of different shows
             Chase forward.
             Chase rearward.
              */
-    caseshow(18, altitude(fakeAlt, variometer)); // fakeAlt is for testing. Defaults to zero for live data.
+    caseshow(19, altitude(fakeAlt, variometer)); // fakeAlt is for testing. Defaults to zero for live data.
   }
   prevShow = currentShow;
 }
@@ -524,9 +525,9 @@ void setWingLeds(uint8_t led, CRGB color) {
 void setWingLeds(uint8_t led, CRGB color, bool add) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max
   if (led < wingNavPoint) {
     if (add) {
-      leftleds[wingNavPoint - led] |= color;
+      leftleds[wingNavPoint - led - 1] |= color;
     } else {
-      leftleds[wingNavPoint - led] = color;
+      leftleds[wingNavPoint - led - 1] = color;
     }
   } else {
     if (add) {
