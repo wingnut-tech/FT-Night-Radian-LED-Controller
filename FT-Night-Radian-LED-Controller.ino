@@ -118,7 +118,9 @@ DEFINE_GRADIENT_PALETTE( variometer ) {     //RGB(255,0,0) RGB(255,255,255) RGB(
 
 DEFINE_GRADIENT_PALETTE( USA ) {           //RGB(255,0,0) RGB(255,255,255) RGB(0,0,255)
   0,   255,0,  0,   //red
+ 25,   255,0,  0,   //red
 128,   255,255,255,   //white
+220,   0,0,255,   //blue
 255,   0,0,255 }; //blue
 
 
@@ -295,7 +297,7 @@ void loop() {
     // currentCh1 = 900; // for testing
     if (currentCh1 != prevCh1) {
       if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
-      currentShow = map(currentCh1, 900, 1900, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
+      currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
       currentShow = currentShow % numActiveShows;
       //currentShow = 17;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
@@ -339,6 +341,8 @@ void stepShow() { // the main menu of different shows
   if (currentShow != prevShow) {
     Serial.print(F("Current Show: "));
     Serial.println(currentShow);
+    Serial.print(F("Channel 1: "));
+    Serial.println(currentCh1);
     currentStep = 0;
     blank();
     if (programMode) {
@@ -371,7 +375,7 @@ void stepShow() { // the main menu of different shows
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
     caseshow(15, chase(CRGB::Orange, CRGB::DarkTurquoise, 50, 35, 80));
     caseshow(16, cylon(CRGB::Orange, CRGB::DarkCyan, 15, 15, 30));
-    caseshow(17, animateColor(USA, 6, 1));
+    caseshow(17, animateColor(USA, 4, 1));
             /*TODO Chase programs:
             Chase all on but a few off. 
             Chase all off but a few on.
