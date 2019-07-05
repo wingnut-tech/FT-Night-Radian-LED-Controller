@@ -501,11 +501,43 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) { // anim
   showStrip();
 }
 
-void setFuseLeds(uint8_t led, CRGB color) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1)
+void setFuseLeds(uint8_t led, CRGB color) {
+  setFuseLeds(led, color, false);
+}
+
+void setFuseLeds(uint8_t led, CRGB color, bool add) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+fuseNavPoint)-1)
   if (led < NOSE_LEDS) {
-    noseleds[led] = color;
+    if (add) {
+      noseleds[led] |= color;
+    } else {
+      noseleds[led] = color;
+    }
   } else {
-    fuseleds[led-NOSE_LEDS] = color;
+    if (add) {
+      fuseleds[led-NOSE_LEDS] |= color;
+    } else {
+      fuseleds[led-NOSE_LEDS] = color;
+    }
+  }
+}
+
+void setWingLeds(uint8_t led, CRGB color) {
+  setWingLeds(led, color, false);
+}
+
+void setWingLeds(uint8_t led, CRGB color, bool add) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max
+  if (led < wingNavPoint) {
+    if (add) {
+      leftleds[wingNavPoint - led] |= color;
+    } else {
+      leftleds[wingNavPoint - led] = color;
+    }
+  } else {
+    if (add) {
+      rightleds[led - wingNavPoint] |= color;
+    } else {
+      rightleds[led - wingNavPoint] = color;
+    }
   }
 }
 
@@ -532,63 +564,6 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   showStrip();
 }
 
-/*
-void oldchase(CRGB color1, CRGB color2, uint8_t lengthWing, uint8_t lengthFuse, uint8_t lengthTail, uint8_t l_interval) { // color segment that chases in one direction, wrapping around
-  static uint8_t currentStepFuse = 0;
-  static uint8_t currentStepTail = 0;
-  //currentStep is for wings
-
-  if (currentStep >= wingNavPoint) {currentStep = 0;}
-  if (currentStepFuse >= (NOSE_LEDS+fuseNavPoint)) {currentStepFuse = 0;}
-  if (currentStepTail >= TAIL_LEDS) {currentStepTail = 0;}
-
-  setColor(color2); // sets the base/background color
-
-  int8_t j;
-  CRGB fadeColor;
-  for (uint8_t i = 0; i < lengthWing; i++) { // this iterates through the "trail", which fades behind the chase point
-    fadeColor = color1.lerp8(color2, (255 / (lengthWing - 1)) * i); // fades between the chase point color and the background, based on the position in the trail
-
-    j = currentStep - i;
-    if (j < 0) {
-      rightleds[wingNavPoint + j] = fadeColor;
-      leftleds[wingNavPoint + j] = fadeColor;
-    } else {
-      rightleds[j] = fadeColor;
-      leftleds[j] = fadeColor;
-    }
-  }
-
-  for (uint8_t i = 0; i < lengthFuse; i++) {
-    fadeColor = color1.lerp8(color2, (255 / (lengthFuse - 1)) * i);
-
-    j = currentStepFuse - i;
-    if (j < 0) {
-      setFuseLeds((NOSE_LEDS+fuseNavPoint) + j, fadeColor);
-    } else {
-      setFuseLeds(j, fadeColor);
-    }
-  }
-
-  for (uint8_t i = 0; i < lengthTail; i++) {
-    fadeColor = color1.lerp8(color2, (255 / (lengthTail - 1)) * i);
-
-    j = currentStepTail - i;
-    if (j < 0) {
-      tailleds[TAIL_LEDS + j] = fadeColor;
-    } else {
-      tailleds[j] = fadeColor;
-    }
-  }
-
-  currentStep++;
-  currentStepFuse++;
-  currentStepTail++;
-  interval = l_interval;
-  showStrip();
-}
-*/
-
 void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
   chase(color1, color2, speedWing, speedFuse, speedTail, false);
 }
@@ -613,10 +588,10 @@ void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8
   }
 
   if (cylon == true) {
-    rightleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
-    leftleds[scale8(sin8(beat8(speedWing)), wingNavPoint-1)] = color1;
-    setFuseLeds(scale8(sin8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
-    tailleds[scale8(sin8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
+    rightleds[scale8(triwave8(beat8(speedWing)), wingNavPoint-1)] = color1;
+    leftleds[scale8(triwave8(beat8(speedWing)), wingNavPoint-1)] = color1;
+    setFuseLeds(scale8(triwave8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
+    tailleds[scale8(triwave8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
   } else {
     rightleds[scale8(beat8(speedWing), wingNavPoint-1)] = color1;
     leftleds[scale8(beat8(speedWing), wingNavPoint-1)] = color1;
@@ -628,18 +603,26 @@ void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8
   showStrip();
 }
 
-// void cylon(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
-//   for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].lerp8(color2, 10);
-//                                               leftleds[i] = leftleds[i].lerp8(color2, 10);}
-//   for (uint8_t i = 0; i < fuseNavPoint; i++) {fuseleds[i] = fuseleds[i].lerp8(color2, 10);}
-//   for (uint8_t i = 0; i < NOSE_LEDS; i++) {noseleds[i] = noseleds[i].lerp8(color2, 10);}
-//   for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].lerp8(color2, 10);}
+void juggle(uint8_t numPulses, uint8_t speed) {
+  uint8_t spread = 256 / numPulses;
 
+  for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].nscale8(192);
+                                              leftleds[i] = leftleds[i].nscale8(192);}
+  for (uint8_t i = 0; i < fuseNavPoint; i++) {fuseleds[i] = fuseleds[i].nscale8(192);}
+  for (uint8_t i = 0; i < NOSE_LEDS; i++) {noseleds[i] = noseleds[i].nscale8(192);}
+  for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].nscale8(192);}
 
+  for (uint8_t i = 0; i < numPulses; i++) {
+    // rightleds[beatsin8(i+speed, 0, wingNavPoint-1)] |= CHSV(i*spread + beat8(1), 200, 255);
+    // leftleds[beatsin8(i+speed, 0, wingNavPoint-1)] |= CHSV(i*spread + beat8(1), 200, 255);
+    setWingLeds(beatsin8(i+speed, 0, (wingNavPoint*2)-1), CHSV(i*spread + beat8(1), 200, 255), true);
+    setFuseLeds(beatsin8(i+speed, 0, (NOSE_LEDS+FUSE_LEDS)-1), CHSV(i*spread + beat8(1), 200, 255), true);
+    tailleds[beatsin8(i+speed, 0, TAIL_LEDS-1)] |= CHSV(i*spread + beat8(1), 200, 255);
+  }
 
-//   interval = 10;
-//   showStrip();
-// }
+  interval = 10;
+  showStrip();
+}
 
 void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helper function for the nav lights
   for (uint8_t i = wingNavPoint; i < WING_LEDS; i++) {
