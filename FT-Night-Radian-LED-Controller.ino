@@ -31,7 +31,7 @@
 
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
-#define NUM_SHOWS 20 // total number of shows. 1+the last caseshow number
+#define NUM_SHOWS_WITH_ALTITUDE 20 // total number of shows. 1+the last caseshow number
 
 #define CONFIG_VERSION 0xAA03 // EEPROM config version (increment this any time the Config struct changes).
 #define CONFIG_START 0 // starting EEPROM address for our config
@@ -40,10 +40,12 @@
 
 #define caseshow(x,y) case x: y; break; // macro for switchcases with a built-in break
 
+uint8_t NUM_SHOWS = NUM_SHOWS_WITH_ALTITUDE; // NUM_SHOWS becomes 1 less if no BMP280 module is installed
+
 uint8_t wingNavPoint = WING_LEDS;
 uint8_t fuseNavPoint = FUSE_LEDS;
 
-uint8_t activeShowNumbers[NUM_SHOWS]; // our array of currently active show switchcase numbers
+uint8_t activeShowNumbers[NUM_SHOWS_WITH_ALTITUDE]; // our array of currently active show switchcase numbers
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
 float basePressure; // gets initialized with ground level pressure on startup
@@ -133,7 +135,7 @@ DEFINE_GRADIENT_PALETTE( USA ) {           //RGB(255,0,0) RGB(255,255,255) RGB(0
 struct Config { // this is the main config struct that holds everything we'd want to save/load from EEPROM
   uint16_t version;
   bool navlights;
-  bool enabledShows[NUM_SHOWS];
+  bool enabledShows[NUM_SHOWS_WITH_ALTITUDE];
 } config;
 
 void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
@@ -201,17 +203,22 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 
-  bmp.begin(0x76); // initialize the altitude pressure sensor with I2C address 0x76
-  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                  Adafruit_BMP280::FILTER_X4,       /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_63);  /* Standby time. */
+  if (bmp.begin(0x76)) { // initialize the altitude pressure sensor with I2C address 0x76
+    Serial.println(F("BMP280 module found."));
+    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+                    Adafruit_BMP280::FILTER_X4,       /* Filtering. */
+                    Adafruit_BMP280::STANDBY_MS_63);  /* Standby time. */
 
-  basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
+    basePressure = bmp.readPressure()/100; // this gets the current pressure at "ground level," so we can get relative altitude
 
-  Serial.print(F("Base Pressure: "));
-  Serial.println(basePressure);
+    Serial.print(F("Base Pressure: "));
+    Serial.println(basePressure);
+  } else { // no BMP280 module installed
+    Serial.println(F("No BMP280 module found. Disabling altitude() function."));
+    NUM_SHOWS = NUM_SHOWS_WITH_ALTITUDE - 1;
+  }
 
   pinMode(PROGRAM_CYCLE_BTN, INPUT_PULLUP);
   pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
@@ -385,6 +392,7 @@ void stepShow() { // the main menu of different shows
             Chase forward.
             Chase rearward.
              */
+    //altitude needs to be the last show so we can disable it if no BMP280 module is installed
     caseshow(19, altitude(fakeAlt, variometer)); // fakeAlt is for testing. Defaults to zero for live data.
   }
   prevShow = currentShow;
