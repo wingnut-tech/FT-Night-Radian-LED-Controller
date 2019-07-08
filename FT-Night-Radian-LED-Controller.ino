@@ -377,8 +377,8 @@ void stepShow() { // the main menu of different shows
     caseshow(12, strobe(3)); //Realistic double strobe alternating between wings
     caseshow(13, strobe(2)); //Realistic landing-light style alternating between wings
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
-    caseshow(15, chase(CRGB::Orange, CRGB::DarkTurquoise, 50, 35, 80));
-    caseshow(16, cylon(CRGB::Red, CRGB::Black, 15, 15, 30));
+    caseshow(15, chase(CRGB::White, CRGB::Black, 50, 35, 80));
+    caseshow(16, cylon(CRGB::Red, CRGB::Black, 30, 30, 50));
     caseshow(17, juggle(4, 8));
     caseshow(18, animateColor(USA, 4, 1));
             /*TODO Chase programs:
@@ -594,8 +594,7 @@ void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8
   }
 
   if (cylon == true) {
-    rightleds[scale8(triwave8(beat8(speedWing)), wingNavPoint-1)] = color1;
-    leftleds[scale8(triwave8(beat8(speedWing)), wingNavPoint-1)] = color1;
+    setWingLeds(scale8(triwave8(beat8(speedWing)), (wingNavPoint*2)-1), color1);
     setFuseLeds(scale8(triwave8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
     tailleds[scale8(triwave8(beat8(speedTail)), TAIL_LEDS-1)] = color1;
   } else {
@@ -862,7 +861,7 @@ void doTwinkle1(struct CRGB * ledArray, uint8_t * pixelState, uint8_t size) { //
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
-  const CRGB colorMin = CRGB(4, 4, 4);
+  const CRGB colorMin = CRGB(0, 0, 0);
   const uint8_t twinkleChance = 1;
 
   for (int i = 0; i < size; i++) {
