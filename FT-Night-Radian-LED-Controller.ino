@@ -555,9 +555,8 @@ void setWingLeds(uint8_t led, CRGB color, bool add) { // sets leds along both wi
 
 void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   if (currentStep > 255) {currentStep = 0;}
-  for (uint8_t i = 0; i < wingNavPoint; i++) {
-    rightleds[i] = CHSV(currentStep + (ledOffset * i), 255, 255);
-    leftleds[i] = CHSV(currentStep + (ledOffset * i), 255, 255);
+  for (uint8_t i = 0; i < (wingNavPoint*2); i++) {
+    setWingLeds(i, CHSV(currentStep + (ledOffset * i), 255, 255));
   }
   for (uint8_t i = 0; i < (NOSE_LEDS+FUSE_LEDS); i++) {
     setFuseLeds(i, CHSV(currentStep + (ledOffset * i), 255, 255));
@@ -629,15 +628,13 @@ void juggle(uint8_t numPulses, uint8_t speed) {
   showStrip();
 }
 
-void setNavLeds(const struct CRGB& rcolor, const struct CRGB& lcolor) { // helper function for the nav lights
+void setNavLeds(const struct CRGB& lcolor, const struct CRGB& rcolor) { // helper function for the nav lights
   for (uint8_t i = wingNavPoint; i < WING_LEDS; i++) {
-    rightleds[i] = rcolor;
     leftleds[i] = lcolor;
+    rightleds[i] = rcolor;
   }
 }
 
-//TODO re-write navlights and all function logic to do a white tail when navlights are on.
-//     Similar to the wingNavPoint setup
 void navLights() { // persistent nav lights
 static uint8_t navStrobeState = 0;
   switch(navStrobeState) {
@@ -816,15 +813,24 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
   
   for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i++) {
-    rightleds[i] = CRGB::White;
-    leftleds[i] = CRGB::White;
+    if ((i % 2) == 0) {
+      rightleds[i] = CRGB::White;
+      leftleds[i] = CRGB::White;
+    } else {
+      rightleds[i] = CRGB::Green;
+      leftleds[i] = CRGB::Green;
+    }
   }
   for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i < wingNavPoint; i++) {
     rightleds[i] = CRGB::Black;
     leftleds[i] = CRGB::Black;
   }
   for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
-    fuseleds[i] = CRGB::White;
+    if ((i % 2) == 0) {
+      fuseleds[i] = CRGB::White;
+    } else {
+      fuseleds[i] = CRGB::Green;
+    }
   }
   for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
     fuseleds[i] = CRGB::Black;
