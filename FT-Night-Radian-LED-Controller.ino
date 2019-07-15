@@ -51,7 +51,9 @@ float basePressure; // gets initialized with ground level pressure on startup
 double fakeAlt = 0;
 
 int currentCh1 = 0;  // Receiver Channel PPM value
-int prevCh1 = 0; // determine if the Receiver signal changed
+int currentCh2 = 0;  // Receiver Channel PPM value
+// int prevCh1 = 0; // determine if the Receiver signal changed
+// int prevCh2 = 0; // determine if the Receiver signal changed
 bool programMode = false;
 
 CRGB rightleds[WING_LEDS];
@@ -239,6 +241,7 @@ void loop() {
   static bool firstrun = true;
   static int programModeCounter = 0;
   static int enableCounter = 0;
+  static unsigned long prevAutoMillis = 0;
   static unsigned long currentMillis = millis();
 
   if (firstrun) {
@@ -271,7 +274,7 @@ void loop() {
         // store current program values into eeprom
         saveConfig();
         programModeCounter = 0;
-        prevCh1 = -1;
+        // prevCh1 = -1;
         programInit('w'); //strobe the leds to indicate leaving program mode
       }
     } else {
@@ -296,16 +299,29 @@ void loop() {
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
     // Read in the length of the signal in microseconds
-    prevCh1 = currentCh1;
-    currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
+    // prevCh1 = currentCh1;
+    // prevCh2 = currentCh2;
+    currentCh1 = pulseIn(RC_PIN1, HIGH, 2500);  // (Pin, State, Timeout)
     // currentCh1 = 900; // for testing
-    if (currentCh1 != prevCh1) {
-      if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
+    // if (currentCh1 != prevCh1) {
+    if (currentCh1 > 700 && currentCh1 < 2500) {
+      // if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
       currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
-      currentShow = currentShow % numActiveShows;
       //currentShow = 17;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
       //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
+    } else {
+      currentCh2 = pulseIn(RC_PIN2, HIGH, 2500);  // (Pin, State, Timeout)
+      if (currentCh2 > 1500 && currentCh2 < 2500) {
+        // auto-scroll through shows
+        if (currentMillis - prevAutoMillis > 5000) {
+          currentShow += 1;
+          prevAutoMillis = currentMillis;
+        }
+      } else if (currentCh2 <= 1500) {
+        // stop autoscrolling. do I need to do anything here?
+      }
     }
+    currentShow = currentShow % numActiveShows;
     
     // Are we entering program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
