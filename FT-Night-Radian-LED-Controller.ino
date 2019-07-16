@@ -50,6 +50,7 @@ uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 float basePressure; // gets initialized with ground level pressure on startup
 double fakeAlt = 0;
 
+uint8_t rcInputPort = 0;
 int currentCh1 = 0;  // Receiver Channel PPM value
 int currentCh2 = 0;  // Receiver Channel PPM value
 // int prevCh1 = 0; // determine if the Receiver signal changed
@@ -298,27 +299,26 @@ void loop() {
     }
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
-    // Read in the length of the signal in microseconds
-    // prevCh1 = currentCh1;
-    // prevCh2 = currentCh2;
-    currentCh1 = pulseIn(RC_PIN1, HIGH, 2500);  // (Pin, State, Timeout)
-    // currentCh1 = 900; // for testing
-    // if (currentCh1 != prevCh1) {
-    if (currentCh1 > 700 && currentCh1 < 2500) {
-      // if (currentCh1 < 700) {currentCh1 = prevCh1;} // if signal is lost or poor quality, we continue running the same show
-      currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 9-19 to get the 900ms - 1900ms value
-      //currentShow = 17;  // uncomment these two lines to test the altitude program using the xmitter knob to drive the altitude reading
-      //fakeAlt = map(currentCh1, 900, 1900, 0, MAX_ALTIMETER);
-    } else {
-      currentCh2 = pulseIn(RC_PIN2, HIGH, 2500);  // (Pin, State, Timeout)
-      if (currentCh2 > 1500 && currentCh2 < 2500) {
-        // auto-scroll through shows
-        if (currentMillis - prevAutoMillis > 5000) {
-          currentShow += 1;
-          prevAutoMillis = currentMillis;
+
+    if (rcInputPort == 0 || rcInputPort == 1) { // if rcInputPort == 0, check both rc input pins until we get a valid signal on one
+      currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
+      if (currentCh1 > 700 && currentCh1 < 2400) {
+        if (rcInputPort == 0) {rcInputPort = 1;}
+        currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 950us - 1980us  to 0 - (numActiveShows-1). might still need timing tweaks.
+      }
+    }
+    if (rcInputPort == 0 || rcInputPort == 2) { // RC_PIN2 is our 2-position-switch autoscroll mode
+      currentCh2 = pulseIn(RC_PIN2, HIGH, 25000);  // (Pin, State, Timeout)
+      if (currentCh2 > 700 && currentCh2 < 2400) {
+        if (rcInputPort == 0) {rcInputPort = 2;}
+        if (currentCh2 > 1500) {
+          // auto-scroll through shows
+          if (currentMillis - prevAutoMillis > 5000) {
+            currentShow += 1;
+            prevAutoMillis = currentMillis;
+          }
         }
-      } else if (currentCh2 <= 1500) {
-        // stop autoscrolling. do I need to do anything here?
+        // else, stop autoscrolling. no need to do anything.
       }
     }
     currentShow = currentShow % numActiveShows;
