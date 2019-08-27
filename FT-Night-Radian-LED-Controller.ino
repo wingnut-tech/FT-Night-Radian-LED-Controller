@@ -313,12 +313,13 @@ void loop() {
         if (rcInputPort == 0) {rcInputPort = 2;}
         if (currentCh2 > 1500) {
           // auto-scroll through shows
-          if (currentMillis - prevAutoMillis > 5000) {
+          if (currentMillis - prevAutoMillis > 2000) {
             currentShow += 1;
             prevAutoMillis = currentMillis;
           }
+        } else { // else, stop autoscrolling, re-start timer
+          prevAutoMillis = currentMillis - 1995;
         }
-        // else, stop autoscrolling. no need to do anything.
       }
     }
     currentShow = currentShow % numActiveShows;
