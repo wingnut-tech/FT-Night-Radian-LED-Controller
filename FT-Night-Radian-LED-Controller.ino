@@ -10,7 +10,6 @@
 #define TAIL_LEDS 8 // total tail LEDs
 
 #define WING_NAV_LEDS 8 // wing LEDs that are navlights
-// #define FUSE_NAV_LEDS 2 // tail LEDs that are navlights
 
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
@@ -42,20 +41,17 @@
 
 uint8_t NUM_SHOWS = NUM_SHOWS_WITH_ALTITUDE; // NUM_SHOWS becomes 1 less if no BMP280 module is installed
 
-uint8_t wingNavPoint = WING_LEDS;
+uint8_t wingNavPoint = WING_LEDS; // the end point of the wing leds, depending on navlights being on/off
 
 uint8_t activeShowNumbers[NUM_SHOWS_WITH_ALTITUDE]; // our array of currently active show switchcase numbers
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
 float basePressure; // gets initialized with ground level pressure on startup
-double fakeAlt = 0;
 
-uint8_t rcInputPort = 0;
+uint8_t rcInputPort = 0; // which RC input port is plugged in? 0 watches both 1 and 2, until either one gets a valid signal. then this gets set to that number
 int currentCh1 = 0;  // Receiver Channel PPM value
 int currentCh2 = 0;  // Receiver Channel PPM value
-// int prevCh1 = 0; // determine if the Receiver signal changed
-// int prevCh2 = 0; // determine if the Receiver signal changed
-bool programMode = false;
+bool programMode = false; // are we in program mode?
 
 CRGB rightleds[WING_LEDS];
 CRGB leftleds[WING_LEDS];
@@ -65,16 +61,16 @@ CRGB tailleds[TAIL_LEDS];
 
 uint8_t currentShow = 0; // which LED show are we currently running
 uint8_t prevShow = 0; // did the LED show change
-int currentStep = 0;
 
-unsigned long prevMillis = 0;
-unsigned long prevNavMillis = 0;
-unsigned long progMillis = 0;
-unsigned long prevStrobeMillis = 0;
+int currentStep = 0; // this is just a global general-purpose counter variable that any show can use for whatever it needs
 
-int interval;
+unsigned long prevMillis = 0; // keeps track of last millis value for regular show timing
+unsigned long prevNavMillis = 0; // keeps track of last millis value for the navlights
+unsigned long progMillis = 0; // keeps track of last millis value for button presses
 
-Adafruit_BMP280 bmp;
+int interval; // delay time between each "frame" of an animation
+
+Adafruit_BMP280 bmp; // bmp280 module object
 
 
 //       _        _   _                    _   _                       
@@ -134,7 +130,7 @@ DEFINE_GRADIENT_PALETTE( USA ) {           //RGB(255,0,0) RGB(255,255,255) RGB(0
 //  \___|\___| .__/|_|  \___/|_| |_| |_|
 //           |_|                        
 
-struct Config { // this is the main config struct that holds everything we'd want to save/load from EEPROM
+struct Config { // this is the main config struct that holds everything we want to save/load from EEPROM
   uint16_t version;
   bool navlights;
   bool enabledShows[NUM_SHOWS_WITH_ALTITUDE];
@@ -143,7 +139,7 @@ struct Config { // this is the main config struct that holds everything we'd wan
 void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
   EEPROM.get(CONFIG_START, config);
   Serial.println(F("Loading config..."));
-  if (config.version != CONFIG_VERSION) {
+  if (config.version != CONFIG_VERSION) { // check if EEPROM version matches this code's version. re-initialize EEPROM if not matching
     // setup defaults
     config.version = CONFIG_VERSION;
     memset(config.enabledShows, true, sizeof(config.enabledShows)); // set all entries of enabledShows to true by default
@@ -266,19 +262,17 @@ void loop() {
 
   if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
     // Are we exiting program mode?
-    if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
+    if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // we're in program mode. is the Program/Cycle button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-      //Serial.println(programModeCounter);
       if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
         programMode = false;
         Serial.println(F("Exiting program mode"));
         // store current program values into eeprom
         saveConfig();
         programModeCounter = 0;
-        // prevCh1 = -1;
         programInit('w'); //strobe the leds to indicate leaving program mode
       }
-    } else {
+    } else { // button not pressed
       if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
         currentShow++;
         if (currentShow == NUM_SHOWS) {currentShow = 0;}
@@ -286,9 +280,9 @@ void loop() {
       programModeCounter = 0;
     }
     
-    if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Is the Program Enable button pressed?
+    if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // we're in program mode. is the Program Enable/Disable button pressed?
       enableCounter = enableCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-    } else {
+    } else { // button not pressed
       if (enableCounter > 0 && enableCounter < 1000) { // momentary press to toggle the current show
         // toggle the state of the current program on/off
         if (config.enabledShows[currentShow] == true) {config.enabledShows[currentShow] = false;}
@@ -312,13 +306,13 @@ void loop() {
       if (currentCh2 > 700 && currentCh2 < 2400) { // valid signal?
         if (rcInputPort == 0) {rcInputPort = 2;} // if we were on "either" port mode, switch it to 2
         if (currentCh2 > 1500) {
-          // auto-scroll through shows
-          if (currentMillis - prevAutoMillis > 2000) {
+          // switch is "up" (above 1500), auto-scroll through shows
+          if (currentMillis - prevAutoMillis > 2000) { // auto-advance after 2 seconds
             currentShow += 1;
             prevAutoMillis = currentMillis;
           }
-        } else { // else, stop autoscrolling, re-start timer
-          prevAutoMillis = currentMillis - 1995; // this keeps the the auto-advance timer constantly "almost there", so when flipping the switch again, it advances right away
+        } else { // switch is "down" (below 1500), stop autoscrolling, reset timer
+          prevAutoMillis = currentMillis - 1995; // this keeps the the auto-advance timer constantly "primed", so when flipping the switch again, it advances right away
         }
       }
     }
@@ -335,7 +329,7 @@ void loop() {
         currentShow = 0;
         programInit(config.enabledShows[currentShow]);
       }
-    } else if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) {
+    } else if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Program button not pressed, but is Enable/Disable button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis);
       if (programModeCounter > 3000) {
         // toggle the navlights on/off
@@ -344,7 +338,7 @@ void loop() {
         saveConfig();
         programModeCounter = 0;
       }
-    } else {
+    } else { // no buttons are being pressed
       programModeCounter = 0;
     }
   }
@@ -358,56 +352,48 @@ void loop() {
 //  |___/\__\___| .__/  |___/_| |_|\___/ \_/\_/   
 //              |_|                               
 
-void stepShow() { // the main menu of different shows
-  if (currentShow != prevShow) {
+void stepShow() { // this is the main "show rendering" update function. this plays the next "frame" of the current show
+  if (currentShow != prevShow) { // did we just switch to a new show?
     Serial.print(F("Current Show: "));
     Serial.println(currentShow);
-    Serial.print(F("Channel 1: "));
-    Serial.println(currentCh1);
-    currentStep = 0;
+    // Serial.print(F("Channel 1: "));
+    // Serial.println(currentCh1);
+    currentStep = 0; // reset the global general-purpose counter
     blank();
-    if (programMode) {
+    if (programMode) { // if we're in program mode and just switched, indicate show status
       programInit(config.enabledShows[currentShow]); //flash all LEDs red/green to indicate current show status
     }
   }
 
-  int switchShow;
-  if (programMode) {
+  int switchShow; // actual show to select in the switchcase
+  if (programMode) { // if we're in program mode, select from all shows
     switchShow = currentShow;
-  } else {
+  } else { // if not in program mode, only select from enabled shows
     switchShow = activeShowNumbers[currentShow];
   }
 
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
-    caseshow(0, blank()); //all off
-    caseshow(1, colorWave1(10, 10));//regular rainbow
-    caseshow(2, colorWave1(0, 10)); // whole plane solid color rainbow
-    caseshow(3, setColor(CRGB::Red));
-    caseshow(4, setColor(CRGB::Orange));
-    caseshow(5, setColor(CRGB::Yellow));
-    caseshow(6, setColor(CRGB::Green));
-    caseshow(7, setColor(CRGB::Blue));
-    caseshow(8, setColor(CRGB::Indigo));
-    caseshow(9, setColor(CRGB::DarkCyan));
+    caseshow(0,  blank()); // all off
+    caseshow(1,  colorWave1(10, 10));// regular rainbow
+    caseshow(2,  colorWave1(0, 10)); // whole plane solid color rainbow
+    caseshow(3,  setColor(CRGB::Red));
+    caseshow(4,  setColor(CRGB::Orange));
+    caseshow(5,  setColor(CRGB::Yellow));
+    caseshow(6,  setColor(CRGB::Green));
+    caseshow(7,  setColor(CRGB::Blue));
+    caseshow(8,  setColor(CRGB::Indigo));
+    caseshow(9,  setColor(CRGB::DarkCyan));
     caseshow(10, setColor(CRGB::White));
-    caseshow(11, twinkle1()); //twinkle effect
-    caseshow(12, strobe(3)); //Realistic double strobe alternating between wings
-    caseshow(13, strobe(2)); //Realistic landing-light style alternating between wings
-    caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier
+    caseshow(11, twinkle1()); // twinkle effect
+    caseshow(12, strobe(3)); // Realistic double strobe alternating between wings
+    caseshow(13, strobe(2)); // Realistic landing-light style alternating between wings
+    caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier. also might cause seizures
     caseshow(15, chase(CRGB::White, CRGB::Black, 50, 35, 80));
     caseshow(16, cylon(CRGB::Red, CRGB::Black, 30, 30, 50));
     caseshow(17, juggle(4, 8));
     caseshow(18, animateColor(USA, 4, 1));
-            /*TODO Chase programs:
-            Chase all on but a few off. 
-            Chase all off but a few on.
-            Chase all out from center.
-            Chase all in to center.
-            Chase forward.
-            Chase rearward.
-             */
     //altitude needs to be the last show so we can disable it if no BMP280 module is installed
-    caseshow(19, altitude(fakeAlt, variometer)); // fakeAlt is for testing. Defaults to zero for live data.
+    caseshow(19, altitude(0, variometer)); // first parameter is for testing. 0 for real live data, set to another number for "fake" altitude
   }
   prevShow = currentShow;
 }
@@ -524,11 +510,8 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) { // anim
   showStrip();
 }
 
-void setFuseLeds(uint8_t led, CRGB color) {
-  setFuseLeds(led, color, false);
-}
-
-void setFuseLeds(uint8_t led, CRGB color, bool add) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1)
+void setFuseLeds(uint8_t led, CRGB color) { setFuseLeds(led, color, false); } // overload for simple setting of leds
+void setFuseLeds(uint8_t led, CRGB color, bool add) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1). add = true to add the new led color to the old value
   if (led < NOSE_LEDS) {
     if (add) {
       noseleds[led] |= color;
@@ -544,11 +527,8 @@ void setFuseLeds(uint8_t led, CRGB color, bool add) { // sets leds along nose an
   }
 }
 
-void setWingLeds(uint8_t led, CRGB color) {
-  setWingLeds(led, color, false);
-}
-
-void setWingLeds(uint8_t led, CRGB color, bool add) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max
+void setWingLeds(uint8_t led, CRGB color) { setWingLeds(led, color, false); }// overload for simple setting of leds
+void setWingLeds(uint8_t led, CRGB color, bool add) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max. add = true to add the new led color to the old value
   if (led < wingNavPoint) {
     if (add) {
       leftleds[wingNavPoint - led - 1] |= color;
@@ -586,15 +566,15 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   showStrip();
 }
 
-void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
+void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a chase pattern
   chase(color1, color2, speedWing, speedFuse, speedTail, false);
 }
 
-void cylon(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) {
+void cylon(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a cylon pattern
   chase(color1, color2, speedWing, speedFuse, speedTail, true);
 }
 
-void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail, bool cylon) {
+void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail, bool cylon) { // main chase function. can do either chase or cylon patterns
   if (color2 == (CRGB)CRGB::Black) {
     for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].nscale8(192);
                                                 leftleds[i] = leftleds[i].nscale8(192);}
@@ -624,7 +604,7 @@ void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8
   showStrip();
 }
 
-void juggle(uint8_t numPulses, uint8_t speed) {
+void juggle(uint8_t numPulses, uint8_t speed) { // a few "pulses" of light that bounce back and forth at different timings
   uint8_t spread = 256 / numPulses;
 
   for (uint8_t i = 0; i < wingNavPoint; i++) {rightleds[i] = rightleds[i].nscale8(192);
@@ -634,11 +614,9 @@ void juggle(uint8_t numPulses, uint8_t speed) {
   for (uint8_t i = 0; i < TAIL_LEDS; i++) {tailleds[i] = tailleds[i].nscale8(192);}
 
   for (uint8_t i = 0; i < numPulses; i++) {
-    // rightleds[beatsin8(i+speed, 0, wingNavPoint-1)] |= CHSV(i*spread + beat8(1), 200, 255);
-    // leftleds[beatsin8(i+speed, 0, wingNavPoint-1)] |= CHSV(i*spread + beat8(1), 200, 255);
-    setWingLeds(beatsin8(i+speed, 0, (wingNavPoint*2)-1), CHSV(i*spread + beat8(1), 200, 255), true);
+    setWingLeds(beatsin8(i+speed, 0, (wingNavPoint*2)-1), CHSV(i*spread + beat8(1), 200, 255), true); // setWingLeds(..., true) does led[i] |= color, so colors add when overlapping
     setFuseLeds(beatsin8(i+speed, 0, (NOSE_LEDS+FUSE_LEDS)-1), CHSV(i*spread + beat8(1), 200, 255), true);
-    tailleds[beatsin8(i+speed, 0, TAIL_LEDS-1)] |= CHSV(i*spread + beat8(1), 200, 255);
+    tailleds[beatsin8(i+speed, 0, TAIL_LEDS-1)] |= CHSV(i*spread + beat8(1), 200, 255); // |= adds colors when overlapping
   }
 
   interval = 10;
@@ -683,7 +661,7 @@ static uint8_t navStrobeState = 0;
 
 // TODO: maybe re-write some of the strobe functions in the style of the navlight "animation",
 //       with a counter and a "frame" switchcase.
-void strobe(int style) { // Various strobe patterns (duh)
+void strobe(int style) { // Various strobe patterns
   static bool StrobeState = true;
 
   switch(style) {
@@ -817,7 +795,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
   static double prevAlt;
   static int avgVSpeed[] = {0,0,0,0};
 
-  interval = 100; // we're going to use interval as a "delta" to base the vspeed off of
+  interval = 100; // we're also going to use interval as a "time delta" to base the vspeed off of
 
   int vSpeed;
   double currentAlt;
@@ -941,7 +919,7 @@ void twinkle1 () { // Random twinkle effect on all LEDs
   showStrip();
 }
 
-void programInit(bool progState) { // takes a bool and flashes red/green depending on true or not
+void programInit(bool progState) { // overload, takes a bool and flashes red/green depending on true or not
   if (progState) {
     Serial.println(F("enabled."));
     programInit('g');
