@@ -302,15 +302,15 @@ void loop() {
 
     if (rcInputPort == 0 || rcInputPort == 1) { // if rcInputPort == 0, check both rc input pins until we get a valid signal on one
       currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
-      if (currentCh1 > 700 && currentCh1 < 2400) {
-        if (rcInputPort == 0) {rcInputPort = 1;}
+      if (currentCh1 > 700 && currentCh1 < 2400) { // do we have a valid signal?
+        if (rcInputPort == 0) {rcInputPort = 1;} // if we were on "either" port mode, switch it to 1
         currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 950us - 1980us  to 0 - (numActiveShows-1). might still need timing tweaks.
       }
     }
     if (rcInputPort == 0 || rcInputPort == 2) { // RC_PIN2 is our 2-position-switch autoscroll mode
       currentCh2 = pulseIn(RC_PIN2, HIGH, 25000);  // (Pin, State, Timeout)
-      if (currentCh2 > 700 && currentCh2 < 2400) {
-        if (rcInputPort == 0) {rcInputPort = 2;}
+      if (currentCh2 > 700 && currentCh2 < 2400) { // valid signal?
+        if (rcInputPort == 0) {rcInputPort = 2;} // if we were on "either" port mode, switch it to 2
         if (currentCh2 > 1500) {
           // auto-scroll through shows
           if (currentMillis - prevAutoMillis > 2000) {
@@ -318,11 +318,11 @@ void loop() {
             prevAutoMillis = currentMillis;
           }
         } else { // else, stop autoscrolling, re-start timer
-          prevAutoMillis = currentMillis - 1995;
+          prevAutoMillis = currentMillis - 1995; // this keeps the the auto-advance timer constantly "almost there", so when flipping the switch again, it advances right away
         }
       }
     }
-    currentShow = currentShow % numActiveShows;
+    currentShow = currentShow % numActiveShows; // keep currentShow within the limits of our active shows
     
     // Are we entering program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
