@@ -17,6 +17,9 @@
 //#define TMP_BRIGHTNESS 55 // uncomment to override brightness for testing
 
 #define MAX_ALTIMETER 400
+
+// define the pins that the buttons are connected to
+
 #define PROGRAM_CYCLE_BTN 6
 #define PROGRAM_ENABLE_BTN 7
 
@@ -28,8 +31,12 @@
 #define LEFT_PIN 11
 #define RIGHT_PIN 12
 
+// define the pins that are used for RC inputs
+
 #define RC_PIN1 5   // Pin 5 Connected to Receiver;
 #define RC_PIN2 4   // Pin 4 Connected to Receiver for optional second channel;
+
+
 #define NUM_SHOWS_WITH_ALTITUDE 20 // total number of shows. 1+the last caseshow number
 
 #define CONFIG_VERSION 0xAA03 // EEPROM config version (increment this any time the Config struct changes).
@@ -260,11 +267,11 @@ void loop() {
     }
   }
 
-  if (programMode) { // we are in program mode where the user can enable/disable programs and set parameters
+  if (programMode) { // we are in program mode where the user can enable/disable programs
     // Are we exiting program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // we're in program mode. is the Program/Cycle button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-      if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
+      if (programModeCounter > 3000) { // Has the button been held down for 3 seconds?
         programMode = false;
         Serial.println(F("Exiting program mode"));
         // store current program values into eeprom
@@ -321,7 +328,7 @@ void loop() {
     // Are we entering program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis); // increment the counter by how many milliseconds have passed
-      if (programModeCounter > 3000) { // Has the button been held down for 5 seconds?
+      if (programModeCounter > 3000) { // Has the button been held down for 3 seconds?
         programMode = true;
         programModeCounter = 0;
         Serial.println(F("Entering program mode"));
@@ -356,8 +363,6 @@ void stepShow() { // this is the main "show rendering" update function. this pla
   if (currentShow != prevShow) { // did we just switch to a new show?
     Serial.print(F("Current Show: "));
     Serial.println(currentShow);
-    // Serial.print(F("Channel 1: "));
-    // Serial.println(currentCh1);
     currentStep = 0; // reset the global general-purpose counter
     blank();
     if (programMode) { // if we're in program mode and just switched, indicate show status
@@ -373,10 +378,10 @@ void stepShow() { // this is the main "show rendering" update function. this pla
   }
 
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
-    caseshow(0,  blank()); // all off
+    caseshow(0,  blank()); // all off except for NAV lights, if enabled
     caseshow(1,  colorWave1(10, 10));// regular rainbow
     caseshow(2,  colorWave1(0, 10)); // whole plane solid color rainbow
-    caseshow(3,  setColor(CRGB::Red));
+    caseshow(3,  setColor(CRGB::Red)); // whole plane solid color
     caseshow(4,  setColor(CRGB::Orange));
     caseshow(5,  setColor(CRGB::Yellow));
     caseshow(6,  setColor(CRGB::Green));
@@ -389,7 +394,7 @@ void stepShow() { // this is the main "show rendering" update function. this pla
     caseshow(13, strobe(2)); // Realistic landing-light style alternating between wings
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier. also might cause seizures
     caseshow(15, chase(CRGB::White, CRGB::Black, 50, 35, 80));
-    caseshow(16, cylon(CRGB::Red, CRGB::Black, 30, 30, 50));
+    caseshow(16, cylon(CRGB::Red, CRGB::Black, 30, 30, 50)); // Night Rider/Cylon style red beam scanning back and forth
     caseshow(17, juggle(4, 8));
     caseshow(18, animateColor(USA, 4, 1));
     //altitude needs to be the last show so we can disable it if no BMP280 module is installed
@@ -451,7 +456,7 @@ CRGB LetterToColor (char letter) { // Convert the letters in the static patterns
               break;
     case 'a': color = CRGB::AntiqueWhite;
               break;
-    case 'o': color = CRGB::Black;
+    case 'o': color = CRGB::Black; // o = off
               break;
   }
   return color;
