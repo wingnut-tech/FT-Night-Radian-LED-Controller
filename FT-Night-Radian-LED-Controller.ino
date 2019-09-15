@@ -432,7 +432,7 @@ void setColor (CRGB color) { // sets all LEDs to a solid color
 }
 
 void setColor (CRGBPalette16 palette) { // spreads a palette across all LEDs
-  for (int i; i < wingNavPoint; i++) {
+  for (int i = 0; i < wingNavPoint; i++) {
     rightleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
     leftleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
     if (i < NOSE_LEDS) {noseleds[i] = ColorFromPalette(palette, map(i, 0, NOSE_LEDS, 0, 240));}
