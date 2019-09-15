@@ -2,14 +2,7 @@
 #include <Adafruit_BMP280.h>
 #include <EEPROM.h>
 
-// define number of LEDs in specific strings
-
-#define WING_LEDS 31 // total wing LEDs
-#define FUSE_LEDS 18 // total fuselage LEDs
-#define NOSE_LEDS 4 // total nose LEDs
-#define TAIL_LEDS 8 // total tail LEDs
-
-#define WING_NAV_LEDS 8 // wing LEDs that are navlights
+#include "config.h"
 
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
@@ -50,6 +43,8 @@ uint8_t NUM_SHOWS = NUM_SHOWS_WITH_ALTITUDE; // NUM_SHOWS becomes 1 less if no B
 
 uint8_t wingNavPoint = WING_LEDS; // the end point of the wing leds, depending on navlights being on/off
 
+uint8_t maxLeds = max(WING_LEDS, max(NOSE_LEDS, max(FUSE_LEDS, TAIL_LEDS)));
+
 uint8_t activeShowNumbers[NUM_SHOWS_WITH_ALTITUDE]; // our array of currently active show switchcase numbers
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
 
@@ -59,12 +54,6 @@ uint8_t rcInputPort = 0; // which RC input port is plugged in? 0 watches both 1 
 int currentCh1 = 0;  // Receiver Channel PPM value
 int currentCh2 = 0;  // Receiver Channel PPM value
 bool programMode = false; // are we in program mode?
-
-CRGB rightleds[WING_LEDS];
-CRGB leftleds[WING_LEDS];
-CRGB noseleds[NOSE_LEDS];
-CRGB fuseleds[FUSE_LEDS];
-CRGB tailleds[TAIL_LEDS];
 
 uint8_t currentShow = 0; // which LED show are we currently running
 uint8_t prevShow = 0; // did the LED show change
@@ -79,6 +68,63 @@ int interval; // delay time between each "frame" of an animation
 
 Adafruit_BMP280 bmp; // bmp280 module object
 
+class LED {
+public:
+  CRGB* leds;
+  bool reversed;
+  uint8_t numLeds;
+
+  // constructor, runs when first initialized
+  LED(uint8_t num, bool rev) {
+    reversed = rev;
+    numLeds = num;
+    leds = (CRGB *)malloc(sizeof(CRGB)*numLeds); // this sets up the array to be the correct length
+  }
+
+  // for setting wingNavPoint
+  void stopPoint(uint8_t stop) {
+    numLeds = stop;
+  }
+
+  // regular led assignment
+  void set(uint8_t led, CRGB color) {
+    if (led < numLeds) {
+      if (reversed) {
+        leds[numLeds - led - 1] = color;
+      } else {
+        leds[led] = color;
+      }
+    }
+  }
+
+  // adds color to existing value
+  void add(uint8_t led, CRGB color) {
+    if (led < numLeds) {
+      if (reversed) {
+        leds[numLeds - led - 1] += color;
+      } else {
+        leds[led] += color;
+      }
+    }
+  }
+
+  // "or"s the colors, making the led the brighter of the two
+  void or(uint8_t led, CRGB color) {
+    if (led < numLeds) {
+      if (reversed) {
+        leds[numLeds - led - 1] |= color;
+      } else {
+        leds[led] += color;
+      }
+    }
+  }
+};
+
+LED Right(WING_LEDS, RIGHT_REV);
+LED Left(WING_LEDS, LEFT_REV);
+LED Nose(NOSE_LEDS, NOSE_REV);
+LED Fuse(FUSE_LEDS, FUSE_REV);
+LED Tail(TAIL_LEDS, TAIL_REV);
 
 //       _        _   _                    _   _                       
 //   ___| |_ __ _| |_(_) ___   _ __   __ _| |_| |_ ___ _ __ _ __  ___  
@@ -183,10 +229,12 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
   }
   Serial.print(F("Navlights: "));
   if (config.navlights) {
-    wingNavPoint = WING_LEDS - WING_NAV_LEDS;
+    Right.stopPoint(WING_LEDS - WING_NAV_LEDS);
+    Left.stopPoint(WING_LEDS - WING_NAV_LEDS);
     Serial.println(F("on."));
   } else {
-    wingNavPoint = WING_LEDS;
+    Right.stopPoint(WING_LEDS);
+    Left.stopPoint(WING_LEDS);
     Serial.println(F("off."));
   }
 }
@@ -227,11 +275,11 @@ void setup() {
   pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
   pinMode(RC_PIN1, INPUT);
   pinMode(RC_PIN2, INPUT);
-  FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(rightleds, WING_LEDS);
-  FastLED.addLeds<NEOPIXEL, LEFT_PIN>(leftleds, WING_LEDS);
-  FastLED.addLeds<NEOPIXEL, FUSE_PIN>(fuseleds, FUSE_LEDS);
-  FastLED.addLeds<NEOPIXEL, NOSE_PIN>(noseleds, NOSE_LEDS);
-  FastLED.addLeds<NEOPIXEL, TAIL_PIN>(tailleds, TAIL_LEDS);
+  FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(Right.leds, WING_LEDS);
+  FastLED.addLeds<NEOPIXEL, LEFT_PIN>(Left.leds, WING_LEDS);
+  FastLED.addLeds<NEOPIXEL, FUSE_PIN>(Fuse.leds, FUSE_LEDS);
+  FastLED.addLeds<NEOPIXEL, NOSE_PIN>(Nose.leds, NOSE_LEDS);
+  FastLED.addLeds<NEOPIXEL, TAIL_PIN>(Tail.leds, TAIL_LEDS);
 }
 
 //                   _         _                    
@@ -352,6 +400,8 @@ void loop() {
   progMillis = currentMillis;
 }
 
+// LEFT OFF HERE
+
 //       _                   _                    
 //   ___| |_ ___ _ __    ___| |__   _____      __ 
 //  / __| __/ _ \ '_ \  / __| '_ \ / _ \ \ /\ / / 
@@ -432,7 +482,7 @@ void setColor (CRGB color) { // sets all LEDs to a solid color
 }
 
 void setColor (CRGBPalette16 palette) { // spreads a palette across all LEDs
-  for (int i; i < wingNavPoint; i++) {
+  for (int i = 0; i < wingNavPoint; i++) {
     rightleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
     leftleds[i] = ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240));
     if (i < NOSE_LEDS) {noseleds[i] = ColorFromPalette(palette, map(i, 0, NOSE_LEDS, 0, 240));}
