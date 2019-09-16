@@ -754,130 +754,241 @@ void strobe(int style) { // Various strobe patterns
   static bool StrobeState = true;
 
   switch(style) {
-
-    case 1: //Rapid strobing all LEDS in unison
-      if (StrobeState) {
-        for (int i = 0; i < wingNavPoint; i++) {
-          Right.set(i, CRGB::White);
-          Left.set(i, CRGB::White);
-        }
-        for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::White);}
-        for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::White);}
-        for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
-        StrobeState = false;
-      } else {
-        for (int i = 0; i < wingNavPoint; i++) {
-          Right.set(i, CRGB::Black);
-          Left.set(i, CRGB::Black);
-        }
-        for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Black);}
-        for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Black);}
-        for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::Black);}
-        StrobeState = true;
-        }
-      interval = 50;
-      showStrip();
-    break;
-
-    case 2: //Alternate strobing of left and right wing
-      if (StrobeState) {
-        for (int i = 0; i < wingNavPoint; i++) {
-          Right.set(i, CRGB::White);
-          Left.set(i, CRGB::Black);
-        }
-        for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Blue);}
-        for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Blue);}
-        for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
-      } else {
-        for (int i = 0; i < wingNavPoint; i++) {
-          Right.set(i, CRGB::Black);
-          Left.set(i, CRGB::White);
-        }
-        for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Yellow);}
-        for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Yellow);}
-        for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
-      }
-      interval = 500;
-      StrobeState = !StrobeState;
-      showStrip();
-    break;
-
-    case 3: //alternate double-blink strobing of left and right wing
-
+    case 1: // Rapid strobing all LEDS in unison
       switch(currentStep) {
-
-        case 0: // Right wing on for 50ms
-          for (int i = 0; i < wingNavPoint; i++) {
+        case 0:
+          for (uint8_t i = 0; i < maxLeds; i++) {
             Right.set(i, CRGB::White);
-            Left.set(i, CRGB::Black);
-          }
-          interval = 50;
-        break;
-          
-        case 1: // Both wings off for 50ms
-          for (int i = 0; i < wingNavPoint; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-          }
-          interval = 50;
-        break;
-          
-        case 2: // Right wing on for 50ms
-          for (int i = 0; i < wingNavPoint; i++) {
-            Right.set(i, CRGB::White);
-            Left.set(i, CRGB::Black);
-          }
-          interval = 50;
-        break;
-          
-        case 3: // Both wings off for 500ms
-          for (int i = 0; i < wingNavPoint; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-          }
-          interval = 500;
-        break;
-          
-        case 4: // Left wing on for 50ms
-          for (int i = 0; i < wingNavPoint; i++) {
-            Right.set(i, CRGB::Black);
             Left.set(i, CRGB::White);
+            Nose.set(i, CRGB::White);
+            Fuse.set(i, CRGB::White);
+            Tail.set(i, CRGB::White);
           }
-          interval = 50;
         break;
-          
-        case 5: // Both wings off for 50ms
-          for (int i = 0; i < wingNavPoint; i++) {
+        case 1:
+          for (uint8_t i = 0; i < maxLeds; i++) {
             Right.set(i, CRGB::Black);
             Left.set(i, CRGB::Black);
+            Nose.set(i, CRGB::Black);
+            Fuse.set(i, CRGB::Black);
+            Tail.set(i, CRGB::Black);
           }
-          interval = 50;
+          currentStep = 0;
         break;
-          
-        case 6: // Left wing on for 50ms
-          for (int i = 0; i < wingNavPoint; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::White);
-          }
-          interval = 50;
-        break;
-          
-        case 7: // Both wings off for 500ms
-          for (int i = 0; i < wingNavPoint; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-          }
-          interval = 500;
-        break;
-                    
       }
-
-      showStrip();
-      currentStep++;
-      if (currentStep == 8) {currentStep = 0;}
     break;
 
+    case 2: // Alternate strobing of left and right wing
+      switch (currentStep) {
+        case 0:
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::White);
+            Left.set(i, CRGB::Black);
+            Nose.set(i, CRGB::Blue);
+            Fuse.set(i, CRGB::Blue);
+            Tail.set(i, CRGB::White);
+          }
+        break;
+        case 10:
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::Black);
+            Left.set(i, CRGB::White);
+            Nose.set(i, CRGB::Yellow);
+            Fuse.set(i, CRGB::Yellow);
+            Tail.set(i, CRGB::White);
+          }
+        break;
+        case 19:
+          currentStep = 0;
+        break;
+      }
+    break;
+    case 3: // alternate double-blink strobing of left and right wing
+      switch(currentStep) {
+        case 0: // Right wing on for 50ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::White);
+            Left.set(i, CRGB::Black);
+          }
+        break;
+        case 1: // Both wings off for 50ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::Black);
+            Left.set(i, CRGB::Black);
+          }
+        break;
+        case 2: // Right wing on for 50ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::White);
+            Left.set(i, CRGB::Black);
+          }
+        break;
+        case 3: // Both wings off for 500ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::Black);
+            Left.set(i, CRGB::Black);
+          }
+        break;
+        case 13: // Left wing on for 50ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::Black);
+            Left.set(i, CRGB::White);
+          }
+        break;
+        case 14: // Both wings off for 50ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::Black);
+            Left.set(i, CRGB::Black);
+          }
+        break;
+        case 15: // Left wing on for 50ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::Black);
+            Left.set(i, CRGB::White);
+          }
+        break;
+        case 16: // Both wings off for 500ms
+          for (uint8_t i = 0; i < maxLeds; i++) {
+            Right.set(i, CRGB::Black);
+            Left.set(i, CRGB::Black);
+          }
+        break;
+        case 25:
+          currentStep = 0;
+        break;
+    }
+    break;
   }
+
+  // switch(style) {
+
+  //   case 1: //Rapid strobing all LEDS in unison
+  //     if (StrobeState) {
+  //       for (int i = 0; i < wingNavPoint; i++) {
+  //         Right.set(i, CRGB::White);
+  //         Left.set(i, CRGB::White);
+  //       }
+  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::White);}
+  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::White);}
+  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
+  //       StrobeState = false;
+  //     } else {
+  //       for (int i = 0; i < wingNavPoint; i++) {
+  //         Right.set(i, CRGB::Black);
+  //         Left.set(i, CRGB::Black);
+  //       }
+  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Black);}
+  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Black);}
+  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::Black);}
+  //       StrobeState = true;
+  //       }
+  //     interval = 50;
+  //     showStrip();
+  //   break;
+
+  //   case 2: //Alternate strobing of left and right wing
+  //     if (StrobeState) {
+  //       for (int i = 0; i < wingNavPoint; i++) {
+  //         Right.set(i, CRGB::White);
+  //         Left.set(i, CRGB::Black);
+  //       }
+  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Blue);}
+  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Blue);}
+  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
+  //     } else {
+  //       for (int i = 0; i < wingNavPoint; i++) {
+  //         Right.set(i, CRGB::Black);
+  //         Left.set(i, CRGB::White);
+  //       }
+  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Yellow);}
+  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Yellow);}
+  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
+  //     }
+  //     interval = 500;
+  //     StrobeState = !StrobeState;
+  //     showStrip();
+  //   break;
+
+  //   case 3: //alternate double-blink strobing of left and right wing
+
+  //     switch(currentStep) {
+
+  //       case 0: // Right wing on for 50ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::White);
+  //           Left.set(i, CRGB::Black);
+  //         }
+  //         interval = 50;
+  //       break;
+          
+  //       case 1: // Both wings off for 50ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::Black);
+  //           Left.set(i, CRGB::Black);
+  //         }
+  //         interval = 50;
+  //       break;
+          
+  //       case 2: // Right wing on for 50ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::White);
+  //           Left.set(i, CRGB::Black);
+  //         }
+  //         interval = 50;
+  //       break;
+          
+  //       case 3: // Both wings off for 500ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::Black);
+  //           Left.set(i, CRGB::Black);
+  //         }
+  //         interval = 500;
+  //       break;
+          
+  //       case 4: // Left wing on for 50ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::Black);
+  //           Left.set(i, CRGB::White);
+  //         }
+  //         interval = 50;
+  //       break;
+          
+  //       case 5: // Both wings off for 50ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::Black);
+  //           Left.set(i, CRGB::Black);
+  //         }
+  //         interval = 50;
+  //       break;
+          
+  //       case 6: // Left wing on for 50ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::Black);
+  //           Left.set(i, CRGB::White);
+  //         }
+  //         interval = 50;
+  //       break;
+          
+  //       case 7: // Both wings off for 500ms
+  //         for (int i = 0; i < wingNavPoint; i++) {
+  //           Right.set(i, CRGB::Black);
+  //           Left.set(i, CRGB::Black);
+  //         }
+  //         interval = 500;
+  //       break;
+                    
+  //     }
+
+  //     showStrip();
+  //     currentStep++;
+  //     if (currentStep == 8) {currentStep = 0;}
+  //   break;
+
+  // }
+
+  interval = 50;
+  currentStep++;
+  showStrip();
 }
 
 void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. wings fill up to indicate altitude, tail goes green/red as variometer
