@@ -75,10 +75,10 @@ public:
   uint8_t numLeds;
 
   // constructor, runs when first initialized
-  LED(uint8_t num, bool rev) {
+  LED(CRGB * ledarray, uint8_t num, bool rev) {
     reversed = rev;
     numLeds = num;
-    leds = (CRGB *)malloc(sizeof(CRGB)*numLeds); // this sets up the array to be the correct length
+    leds = ledarray; // Sets the internal 'leds' pointer to point to the "real" led array
   }
 
   // for setting wingNavPoint
@@ -132,11 +132,17 @@ public:
   }
 };
 
-LED Right(WING_LEDS, RIGHT_REV);
-LED Left(WING_LEDS, LEFT_REV);
-LED Nose(NOSE_LEDS, NOSE_REV);
-LED Fuse(FUSE_LEDS, FUSE_REV);
-LED Tail(TAIL_LEDS, TAIL_REV);
+CRGB rightleds[WING_LEDS];
+CRGB leftleds[WING_LEDS];
+CRGB noseleds[NOSE_LEDS];
+CRGB fuseleds[FUSE_LEDS];
+CRGB tailleds[TAIL_LEDS];
+
+LED Right(rightleds, WING_LEDS, RIGHT_REV);
+LED Left(leftleds, WING_LEDS, LEFT_REV);
+LED Nose(noseleds, NOSE_LEDS, NOSE_REV);
+LED Fuse(fuseleds, FUSE_LEDS, FUSE_REV);
+LED Tail(tailleds, TAIL_LEDS, TAIL_REV);
 
 //       _        _   _                    _   _                       
 //   ___| |_ __ _| |_(_) ___   _ __   __ _| |_| |_ ___ _ __ _ __  ___  
