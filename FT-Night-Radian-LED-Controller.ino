@@ -43,7 +43,7 @@ uint8_t NUM_SHOWS = NUM_SHOWS_WITH_ALTITUDE; // NUM_SHOWS becomes 1 less if no B
 
 uint8_t wingNavPoint = WING_LEDS; // the end point of the wing leds, depending on navlights being on/off
 
-const uint8_t maxLeds = max(WING_LEDS, max(NOSE_LEDS, max(FUSE_LEDS, TAIL_LEDS)));
+const uint8_t maxLeds = max(WING_LEDS, max((NOSE_LEDS+FUSE_LEDS), TAIL_LEDS));
 
 uint8_t activeShowNumbers[NUM_SHOWS_WITH_ALTITUDE]; // our array of currently active show switchcase numbers
 uint8_t numActiveShows = NUM_SHOWS; // how many actual active shows
@@ -87,7 +87,7 @@ public:
   }
 
   // regular led assignment
-  void set(uint8_t led, CRGB color) {
+  void set(uint8_t led, const CRGB& color) {
     if (led < numLeds) {
       if (reversed) {
         leds[numLeds - led - 1] = color;
@@ -98,7 +98,7 @@ public:
   }
 
   // adds color to existing value
-  void add(uint8_t led, CRGB color) {
+  void add(uint8_t led, const CRGB& color) {
     if (led < numLeds) {
       if (reversed) {
         leds[numLeds - led - 1] += color;
@@ -109,7 +109,7 @@ public:
   }
 
   // "or"s the colors, making the led the brighter of the two
-  void addor(uint8_t led, CRGB color) {
+  void addor(uint8_t led, const CRGB& color) {
     if (led < numLeds) {
       if (reversed) {
         leds[numLeds - led - 1] |= color;
@@ -125,7 +125,7 @@ public:
     }
   }
 
-  void lerp8(CRGB other, uint8_t frac) {
+  void lerp8(const CRGB& other, uint8_t frac) {
     for (uint8_t i = 0; i < numLeds; i++) {
       leds[i] = leds[i].lerp8(other, frac);
     }
@@ -483,7 +483,7 @@ void blank() { // Turn off all LEDs
   showStrip();
 }
 
-void setColor(CRGB color) { // sets all LEDs to a solid color
+void setColor(const CRGB& color) { // sets all LEDs to a solid color
   fill_solid(Right.leds, wingNavPoint, color);
   fill_solid(Left.leds, wingNavPoint, color);
   fill_solid(Nose.leds, NOSE_LEDS, color);
@@ -493,7 +493,7 @@ void setColor(CRGB color) { // sets all LEDs to a solid color
   showStrip();
 }
 
-void setColor (CRGBPalette16 palette) { // spreads a palette across all LEDs
+void setColor (const CRGBPalette16& palette) { // spreads a palette across all LEDs
   for (int i = 0; i < maxLeds; i++) {
     Right.set(i, ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240)));
     Left.set(i, ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240)));
@@ -561,7 +561,7 @@ void setInitPattern () { // set all LEDs to the static init pattern
   showStrip();
 }
 
-void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) { // animates a palette across all LEDs
+void animateColor (const CRGBPalette16& palette, int ledOffset, int stepSize) { // animates a palette across all LEDs
   if (currentStep > 255) {currentStep -= 255;}
   for (uint8_t i = 0; i < maxLeds; i++) {
     int j = triwave8((i * ledOffset) + currentStep);
@@ -582,8 +582,8 @@ void animateColor (CRGBPalette16 palette, int ledOffset, int stepSize) { // anim
   showStrip();
 }
 
-void setNoseFuse(uint8_t led, CRGB color) { setNoseFuse(led, color, false); } // overload for simple setting of leds
-void setNoseFuse(uint8_t led, CRGB color, bool combine) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1). combine = true to combine the new led color with the old value
+void setNoseFuse(uint8_t led, const CRGB& color) { setNoseFuse(led, color, false); } // overload for simple setting of leds
+void setNoseFuse(uint8_t led, const CRGB& color, bool combine) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1). combine = true to combine the new led color with the old value
   if (led < NOSE_LEDS) {
     if (combine) {
       Nose.addor(led, color);
@@ -599,8 +599,8 @@ void setNoseFuse(uint8_t led, CRGB color, bool combine) { // sets leds along nos
   }
 }
 
-void setBothWings(uint8_t led, CRGB color) { setBothWings(led, color, false); }// overload for simple setting of leds
-void setBothWings(uint8_t led, CRGB color, bool combine) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max. combine = true to combine the new led color with the old value
+void setBothWings(uint8_t led, const CRGB& color) { setBothWings(led, color, false); }// overload for simple setting of leds
+void setBothWings(uint8_t led, const CRGB& color, bool combine) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max. combine = true to combine the new led color with the old value
   if (led < wingNavPoint) {
     if (combine) {
       Left.addor(wingNavPoint - led - 1, color);
@@ -640,15 +640,15 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   showStrip();
 }
 
-void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a chase pattern
+void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a chase pattern
   chase(color1, color2, speedWing, speedFuse, speedTail, false);
 }
 
-void cylon(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a cylon pattern
+void cylon(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a cylon pattern
   chase(color1, color2, speedWing, speedFuse, speedTail, true);
 }
 
-void chase(CRGB color1, CRGB color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail, bool cylon) { // main chase function. can do either chase or cylon patterns
+void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail, bool cylon) { // main chase function. can do either chase or cylon patterns
   if (color2 == (CRGB)CRGB::Black) {
     Right.nscale8(192);
     Left.nscale8(192);
@@ -712,7 +712,7 @@ void juggle(uint8_t numPulses, uint8_t speed) { // a few "pulses" of light that 
   showStrip();
 }
 
-void setNavLeds(const struct CRGB& lcolor, const struct CRGB& rcolor) { // helper function for the nav lights
+void setNavLeds(const CRGB& lcolor, const CRGB& rcolor) { // helper function for the nav lights
   for (uint8_t i = wingNavPoint; i < WING_LEDS; i++) {
     Left.set(i, lcolor);
     Right.set(i, rcolor);
@@ -748,8 +748,8 @@ static uint8_t navStrobeState = 0;
   navStrobeState++;
 }
 
-// TODO: maybe re-write some of the strobe functions in the style of the navlight "animation",
-//       with a counter and a "frame" switchcase.
+// TODO: Test out the new timing system.
+//       I'm leaving the current code commented until I know this new one works
 void strobe(int style) { // Various strobe patterns
   static bool StrobeState = true;
 
@@ -757,22 +757,18 @@ void strobe(int style) { // Various strobe patterns
     case 1: // Rapid strobing all LEDS in unison
       switch(currentStep) {
         case 0:
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::White);
-            Left.set(i, CRGB::White);
-            Nose.set(i, CRGB::White);
-            Fuse.set(i, CRGB::White);
-            Tail.set(i, CRGB::White);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::White);
+            fill_solid(Left.leds, wingNavPoint, CRGB::White);
+            fill_solid(Nose.leds, NOSE_LEDS, CRGB::White);
+            fill_solid(Fuse.leds, FUSE_LEDS, CRGB::White);
+            fill_solid(Tail.leds, TAIL_LEDS, CRGB::White);
         break;
         case 1:
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-            Nose.set(i, CRGB::Black);
-            Fuse.set(i, CRGB::Black);
-            Tail.set(i, CRGB::Black);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Nose.leds, NOSE_LEDS, CRGB::Black);
+            fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Black);
+            fill_solid(Tail.leds, TAIL_LEDS, CRGB::Black);
           currentStep = 0;
         break;
       }
@@ -781,22 +777,18 @@ void strobe(int style) { // Various strobe patterns
     case 2: // Alternate strobing of left and right wing
       switch (currentStep) {
         case 0:
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::White);
-            Left.set(i, CRGB::Black);
-            Nose.set(i, CRGB::Blue);
-            Fuse.set(i, CRGB::Blue);
-            Tail.set(i, CRGB::White);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::White);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Nose.leds, NOSE_LEDS, CRGB::Blue);
+            fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Blue);
+            fill_solid(Tail.leds, TAIL_LEDS, CRGB::White);
         break;
         case 10:
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::White);
-            Nose.set(i, CRGB::Yellow);
-            Fuse.set(i, CRGB::Yellow);
-            Tail.set(i, CRGB::White);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::White);
+            fill_solid(Nose.leds, NOSE_LEDS, CRGB::Yellow);
+            fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Yellow);
+            fill_solid(Tail.leds, TAIL_LEDS, CRGB::White);
         break;
         case 19:
           currentStep = 0;
@@ -806,52 +798,36 @@ void strobe(int style) { // Various strobe patterns
     case 3: // alternate double-blink strobing of left and right wing
       switch(currentStep) {
         case 0: // Right wing on for 50ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::White);
-            Left.set(i, CRGB::Black);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::White);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
         break;
         case 1: // Both wings off for 50ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
         break;
         case 2: // Right wing on for 50ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::White);
-            Left.set(i, CRGB::Black);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::White);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
         break;
         case 3: // Both wings off for 500ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
         break;
         case 13: // Left wing on for 50ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::White);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::White);
         break;
         case 14: // Both wings off for 50ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
         break;
         case 15: // Left wing on for 50ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::White);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::White);
         break;
         case 16: // Both wings off for 500ms
-          for (uint8_t i = 0; i < maxLeds; i++) {
-            Right.set(i, CRGB::Black);
-            Left.set(i, CRGB::Black);
-          }
+            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
         break;
         case 25:
           currentStep = 0;
@@ -991,7 +967,7 @@ void strobe(int style) { // Various strobe patterns
   showStrip();
 }
 
-void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. wings fill up to indicate altitude, tail goes green/red as variometer
+void altitude(double fake, const CRGBPalette16& palette) { // Altitude indicator show. wings fill up to indicate altitude, tail goes green/red as variometer
   static double prevAlt;
   static int avgVSpeed[] = {0,0,0,0};
 
@@ -1041,9 +1017,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
 
   vspeedMap = map(vSpeed, -interval, interval, 0, 240);
 
-  for (int i = 0; i < TAIL_LEDS; i++) {
-    Tail.set(i, ColorFromPalette(palette, vspeedMap));
-  }
+  fill_solid(Tail.leds, TAIL_LEDS, ColorFromPalette(palette, vspeedMap));
 
   Serial.print(F("Current relative altitude:  "));
   Serial.print(currentAlt);
@@ -1058,7 +1032,7 @@ void altitude(double fake, CRGBPalette16 palette) { // Altitude indicator show. 
 }
 
 enum {SteadyDim, Dimming, Brightening};
-void doTwinkle1(struct CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper function for the twinkle show
+void doTwinkle1(CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper function for the twinkle show
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
@@ -1143,23 +1117,20 @@ void programInit(char progState) { // flashes red/green/white for different prog
       break;
   }
   for (int j = 0; j < 7; j++) {
-    for (int i = 0; i < maxLeds; i++) {
-      Right.set(i, color);
-      Left.set(i, color);
-      Nose.set(i, color);
-      Fuse.set(i, color);
-      Tail.set(i, color);
-    }
+    fill_solid(Right.leds, wingNavPoint, color);
+    fill_solid(Left.leds, wingNavPoint, color);
+    fill_solid(Nose.leds, NOSE_LEDS, color);
+    fill_solid(Fuse.leds, FUSE_LEDS, color);
+    fill_solid(Tail.leds, TAIL_LEDS, color);
     digitalWrite(LED_BUILTIN, HIGH);
     showStrip();
     delay(50);
-    for (int i = 0; i < maxLeds; i++) {
-      Right.set(i, CRGB::Black);
-      Left.set(i, CRGB::Black);
-      Nose.set(i, CRGB::Black);
-      Fuse.set(i, CRGB::Black);
-      Tail.set(i, CRGB::Black);
-    }
+
+    fill_solid(Right.leds, wingNavPoint, CRGB::Black);
+    fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+    fill_solid(Nose.leds, NOSE_LEDS, CRGB::Black);
+    fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Black);
+    fill_solid(Tail.leds, TAIL_LEDS, CRGB::Black);
     digitalWrite(LED_BUILTIN, LOW);
     showStrip();
     delay(50);
