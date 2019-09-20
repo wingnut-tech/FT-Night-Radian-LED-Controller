@@ -138,8 +138,8 @@ CRGB noseleds[NOSE_LEDS];
 CRGB fuseleds[FUSE_LEDS];
 CRGB tailleds[TAIL_LEDS];
 
-LED Right(rightleds, WING_LEDS, RIGHT_REV);
-LED Left(leftleds, WING_LEDS, LEFT_REV);
+LED Right(rightleds, WING_LEDS, WING_REV);
+LED Left(leftleds, WING_LEDS, WING_REV);
 LED Nose(noseleds, NOSE_LEDS, NOSE_REV);
 LED Fuse(fuseleds, FUSE_LEDS, FUSE_REV);
 LED Tail(tailleds, TAIL_LEDS, TAIL_REV);
@@ -589,15 +589,15 @@ void animateColor (const CRGBPalette16& palette, int ledOffset, int stepSize) { 
 }
 
 void setNoseFuse(uint8_t led, const CRGB& color) { setNoseFuse(led, color, false); } // overload for simple setting of leds
-void setNoseFuse(uint8_t led, const CRGB& color, bool combine) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1). combine = true to combine the new led color with the old value
+void setNoseFuse(uint8_t led, const CRGB& color, bool addor) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1). addor = true to "or" the new led color with the old value
   if (led < NOSE_LEDS) {
-    if (combine) {
+    if (addor) {
       Nose.addor(led, color);
     } else {
       Nose.set(led, color);
     }
   } else {
-    if (combine) {
+    if (addor) {
       Fuse.addor(led-NOSE_LEDS, color);
     } else {
       Fuse.set(led-NOSE_LEDS, color);
@@ -606,15 +606,15 @@ void setNoseFuse(uint8_t led, const CRGB& color, bool combine) { // sets leds al
 }
 
 void setBothWings(uint8_t led, const CRGB& color) { setBothWings(led, color, false); }// overload for simple setting of leds
-void setBothWings(uint8_t led, const CRGB& color, bool combine) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max. combine = true to combine the new led color with the old value
+void setBothWings(uint8_t led, const CRGB& color, bool addor) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max. addor = true to "or" the new led color with the old value
   if (led < wingNavPoint) {
-    if (combine) {
+    if (addor) {
       Left.addor(wingNavPoint - led - 1, color);
     } else {
       Left.set(wingNavPoint - led - 1, color);
     }
   } else {
-    if (combine) {
+    if (addor) {
       Right.addor(led - wingNavPoint, color);
     } else {
       Right.set(led - wingNavPoint, color);
