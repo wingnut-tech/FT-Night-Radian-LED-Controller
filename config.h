@@ -7,8 +7,7 @@
 
 #define NOSE_FUSE_JOINED true
 
-#define LEFT_REV false
-#define RIGHT_REV false
+#define WING_REV false
 #define NOSE_REV false
 #define FUSE_REV false
 #define TAIL_REV false
