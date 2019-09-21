@@ -459,8 +459,8 @@ void stepShow() { // this is the main "show rendering" update function. this pla
     caseshow(12, strobe(3)); // Realistic double strobe alternating between wings
     caseshow(13, strobe(2)); // Realistic landing-light style alternating between wings
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier. also might cause seizures
-    caseshow(15, chase(CRGB::White, CRGB::Black, 50, 35, 80));
-    caseshow(16, cylon(CRGB::Red, CRGB::Black, 30, 30, 50)); // Night Rider/Cylon style red beam scanning back and forth
+    caseshow(15, chase(CRGB::White, CRGB::Black, 50, 80, 35, 80));
+    caseshow(16, cylon(CRGB::Red, CRGB::Black, 30, 50, 30, 50)); // Night Rider/Cylon style red beam scanning back and forth
     caseshow(17, juggle(4, 8));
     caseshow(18, animateColor(USA, 4, 1));
     //altitude needs to be the last show so we can disable it if no BMP280 module is installed
@@ -646,15 +646,15 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   showStrip();
 }
 
-void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a chase pattern
-  chase(color1, color2, speedWing, speedFuse, speedTail, false);
+void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail) { // overload to do a chase pattern
+  chase(color1, color2, speedWing, speedNose, speedFuse, speedTail, false);
 }
 
-void cylon(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail) { // overload to do a cylon pattern
-  chase(color1, color2, speedWing, speedFuse, speedTail, true);
+void cylon(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail) { // overload to do a cylon pattern
+  chase(color1, color2, speedWing, speedNose, speedFuse, speedTail, true);
 }
 
-void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedFuse, uint8_t speedTail, bool cylon) { // main chase function. can do either chase or cylon patterns
+void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail, bool cylon) { // main chase function. can do either chase or cylon patterns
   if (color2 == (CRGB)CRGB::Black) {
     Right.nscale8(192);
     Left.nscale8(192);
@@ -675,7 +675,7 @@ void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t sp
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(scale8(triwave8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
     } else {
-      Nose.set(scale8(triwave8(beat8(speedFuse)), NOSE_LEDS-1), color1);
+      Nose.set(scale8(triwave8(beat8(speedNose)), NOSE_LEDS-1), color1);
       Fuse.set(scale8(triwave8(beat8(speedFuse)), FUSE_LEDS-1), color1);
     }
   } else {
@@ -685,7 +685,7 @@ void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t sp
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(scale8(beat8(speedFuse), (NOSE_LEDS+FUSE_LEDS)-1), color1);
     } else {
-      Nose.set(scale8(beat8(speedFuse), NOSE_LEDS-1), color1);
+      Nose.set(scale8(beat8(speedNose), NOSE_LEDS-1), color1);
       Fuse.set(scale8(beat8(speedFuse), FUSE_LEDS-1), color1);
     }
   }
