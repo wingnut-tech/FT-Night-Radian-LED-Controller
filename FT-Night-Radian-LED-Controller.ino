@@ -73,22 +73,19 @@ public:
   CRGB* leds;
   bool reversed;
   uint8_t numLeds;
+  uint8_t stopPoint;
 
   // constructor, runs when first initialized
   LED(CRGB * ledarray, uint8_t num, bool rev) {
     reversed = rev;
     numLeds = num;
+    stopPoint = num;
     leds = ledarray; // Sets the internal 'leds' pointer to point to the "real" led array
-  }
-
-  // for setting wingNavPoint
-  void stopPoint(uint8_t stop) {
-    numLeds = stop;
   }
 
   // regular led assignment
   void set(uint8_t led, const CRGB& color) {
-    if (led < numLeds) {
+    if (led < stopPoint) {
       if (reversed) {
         leds[numLeds - led - 1] = color;
       } else {
@@ -97,9 +94,19 @@ public:
     }
   }
 
+  void setNav(const CRGB& color) {
+    for (uint8_t i = 0; i < WING_NAV_LEDS; i++) {
+      if (reversed) {
+        leds[i] = color;
+      } else {
+        leds[numLeds - i - 1] = color;
+      }
+    }
+  }
+
   // adds color to existing value
   void add(uint8_t led, const CRGB& color) {
-    if (led < numLeds) {
+    if (led < stopPoint) {
       if (reversed) {
         leds[numLeds - led - 1] += color;
       } else {
@@ -110,7 +117,7 @@ public:
 
   // "or"s the colors, making the led the brighter of the two
   void addor(uint8_t led, const CRGB& color) {
-    if (led < numLeds) {
+    if (led < stopPoint) {
       if (reversed) {
         leds[numLeds - led - 1] |= color;
       } else {
@@ -120,14 +127,22 @@ public:
   }
 
   void nscale8(uint8_t scale) {
-    for (uint8_t i = 0; i < numLeds; i++) {
-      leds[i] = leds[i].nscale8(scale);
+    for (uint8_t i = 0; i < stopPoint; i++) {
+      if (reversed) {
+        leds[numLeds - i - 1] = leds[numLeds - i - 1].nscale8(scale);
+      } else {
+        leds[i] = leds[i].nscale8(scale);
+      }
     }
   }
 
   void lerp8(const CRGB& other, uint8_t frac) {
-    for (uint8_t i = 0; i < numLeds; i++) {
-      leds[i] = leds[i].lerp8(other, frac);
+    for (uint8_t i = 0; i < stopPoint; i++) {
+      if (reversed) {
+        leds[numLeds - i - 1] = leds[numLeds - i - 1].lerp8(other, frac);
+      } else {
+        leds[i] = leds[i].lerp8(other, frac);
+      }
     }
   }
 };
@@ -247,12 +262,12 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
   }
   Serial.print(F("Navlights: "));
   if (config.navlights) {
-    Right.stopPoint(WING_LEDS - WING_NAV_LEDS);
-    Left.stopPoint(WING_LEDS - WING_NAV_LEDS);
+    Right.stopPoint = WING_LEDS - WING_NAV_LEDS;
+    Left.stopPoint = WING_LEDS - WING_NAV_LEDS;
     Serial.println(F("on."));
   } else {
-    Right.stopPoint(WING_LEDS);
-    Left.stopPoint(WING_LEDS);
+    Right.stopPoint = WING_LEDS;
+    Left.stopPoint = WING_LEDS;
     Serial.println(F("off."));
   }
 }
@@ -718,35 +733,33 @@ void juggle(uint8_t numPulses, uint8_t speed) { // a few "pulses" of light that 
   showStrip();
 }
 
-void setNavLeds(const CRGB& lcolor, const CRGB& rcolor) { // helper function for the nav lights
-  for (uint8_t i = wingNavPoint; i < WING_LEDS; i++) {
-    Left.set(i, lcolor);
-    Right.set(i, rcolor);
-  }
-}
-
 void navLights() { // persistent nav lights
 static uint8_t navStrobeState = 0;
   switch(navStrobeState) {
     case 0:
       // red/green
-      setNavLeds(CRGB::Red, CRGB::Green);
+      Left.setNav(CRGB::Red);
+      Right.setNav(CRGB::Green);
       break;
     case 50:
       // strobe 1
-      setNavLeds(CRGB::White, CRGB::White);
+      Left.setNav(CRGB::White);
+      Right.setNav(CRGB::White);
       break;
     case 52:
       // back to red/green
-      setNavLeds(CRGB::Red, CRGB::Green);
+      Left.setNav(CRGB::Red);
+      Right.setNav(CRGB::Green);
       break;
     case 54:
       // strobe 2
-      setNavLeds(CRGB::White, CRGB::White);
+      Left.setNav(CRGB::White);
+      Right.setNav(CRGB::White);
       break;
     case 56:
       // red/green again
-      setNavLeds(CRGB::Red, CRGB::Green);
+      Left.setNav(CRGB::Red);
+      Right.setNav(CRGB::Green);
       navStrobeState = 0;
       break;
   }
