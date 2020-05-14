@@ -41,7 +41,7 @@
 
 uint8_t NUM_SHOWS = NUM_SHOWS_WITH_ALTITUDE; // NUM_SHOWS becomes 1 less if no BMP280 module is installed
 
-uint8_t wingNavPoint = WING_LEDS; // the end point of the wing leds, depending on navlights being on/off
+// uint8_t wingNavPoint = WING_LEDS; // the end point of the wing leds, depending on navlights being on/off
 
 const uint8_t maxLeds = max(WING_LEDS, max((NOSE_LEDS+FUSE_LEDS), TAIL_LEDS));
 
@@ -96,9 +96,9 @@ public:
 
   void setNav(const CRGB& color) {
     for (uint8_t i = 0; i < WING_NAV_LEDS; i++) {
-      if (reversed) {
+      if (reversed) { // if reversed, start at the "beginning" of the led string
         leds[i] = color;
-      } else {
+      } else { // not reversed, so start at the "end" of the string and work inwards.
         leds[numLeds - i - 1] = color;
       }
     }
@@ -505,8 +505,8 @@ void blank() { // Turn off all LEDs
 }
 
 void setColor(const CRGB& color) { // sets all LEDs to a solid color
-  fill_solid(Right.leds, wingNavPoint, color);
-  fill_solid(Left.leds, wingNavPoint, color);
+  fill_solid(Right.leds, Right.stopPoint, color);
+  fill_solid(Left.leds, Left.stopPoint, color);
   fill_solid(Nose.leds, NOSE_LEDS, color);
   fill_solid(Fuse.leds, FUSE_LEDS, color);
   fill_solid(Tail.leds, TAIL_LEDS, color);
@@ -516,8 +516,8 @@ void setColor(const CRGB& color) { // sets all LEDs to a solid color
 
 void setColor (const CRGBPalette16& palette) { // spreads a palette across all LEDs
   for (int i = 0; i < maxLeds; i++) {
-    Right.set(i, ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240)));
-    Left.set(i, ColorFromPalette(palette, map(i, 0, wingNavPoint, 0, 240)));
+    Right.set(i, ColorFromPalette(palette, map(i, 0, Right.stopPoint, 0, 240)));
+    Left.set(i, ColorFromPalette(palette, map(i, 0, Left.stopPoint, 0, 240)));
     Tail.set(i, ColorFromPalette(palette, map(i, 0, TAIL_LEDS, 0, 240)));
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(i, ColorFromPalette(palette, map(i, 0, NOSE_LEDS+FUSE_LEDS, 0, 240)));
@@ -621,18 +621,18 @@ void setNoseFuse(uint8_t led, const CRGB& color, bool addor) { // sets leds alon
 }
 
 void setBothWings(uint8_t led, const CRGB& color) { setBothWings(led, color, false); }// overload for simple setting of leds
-void setBothWings(uint8_t led, const CRGB& color, bool addor) { // sets leds along both wings as if they were the same strip. range is 0 - ((wingNavPoint*2)-1). left wingNavPoint = 0, right wingNavPoint = max. addor = true to "or" the new led color with the old value
-  if (led < wingNavPoint) {
+void setBothWings(uint8_t led, const CRGB& color, bool addor) { // sets leds along both wings as if they were the same strip. range is 0 - ((stopPoint*2)-1). left.stopPoint = 0, right.stopPoint = max. addor = true to "or" the new led color with the old value
+  if (led < Left.stopPoint) {
     if (addor) {
-      Left.addor(wingNavPoint - led - 1, color);
+      Left.addor(Left.stopPoint - led - 1, color);
     } else {
-      Left.set(wingNavPoint - led - 1, color);
+      Left.set(Left.stopPoint - led - 1, color);
     }
   } else {
     if (addor) {
-      Right.addor(led - wingNavPoint, color);
+      Right.addor(led - Left.stopPoint, color);
     } else {
-      Right.set(led - wingNavPoint, color);
+      Right.set(led - Left.stopPoint, color);
     }
   }
 }
@@ -685,7 +685,7 @@ void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t sp
   }
 
   if (cylon == true) {
-    setBothWings(scale8(triwave8(beat8(speedWing)), (wingNavPoint*2)-1), color1);
+    setBothWings(scale8(triwave8(beat8(speedWing)), (Right.stopPoint+Left.stopPoint)-1), color1);
     Tail.set(scale8(triwave8(beat8(speedTail)), TAIL_LEDS-1), color1);
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(scale8(triwave8(beat8(speedFuse)), (NOSE_LEDS+FUSE_LEDS)-1), color1);
@@ -694,8 +694,8 @@ void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t sp
       Fuse.set(scale8(triwave8(beat8(speedFuse)), FUSE_LEDS-1), color1);
     }
   } else {
-    Right.set(scale8(beat8(speedWing), wingNavPoint-1), color1);
-    Left.set(scale8(beat8(speedWing), wingNavPoint-1), color1);
+    Right.set(scale8(beat8(speedWing), Right.stopPoint-1), color1);
+    Left.set(scale8(beat8(speedWing), Left.stopPoint-1), color1);
     Tail.set(scale8(beat8(speedTail), TAIL_LEDS-1), color1);
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(scale8(beat8(speedFuse), (NOSE_LEDS+FUSE_LEDS)-1), color1);
@@ -719,7 +719,7 @@ void juggle(uint8_t numPulses, uint8_t speed) { // a few "pulses" of light that 
   Tail.nscale8(192);
 
   for (uint8_t i = 0; i < numPulses; i++) {
-    setBothWings(beatsin8(i+speed, 0, (wingNavPoint*2)-1), CHSV(i*spread + beat8(1), 200, 255), true); // setBothWings(..., true) does led[i] |= color, so colors add when overlapping
+    setBothWings(beatsin8(i+speed, 0, (Right.stopPoint+Left.stopPoint)-1), CHSV(i*spread + beat8(1), 200, 255), true); // setBothWings(..., true) does led[i] |= color, so colors add when overlapping
     Tail.addor(beatsin8(i+speed, 0, TAIL_LEDS-1), CHSV(i*spread + beat8(1), 200, 255));
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(beatsin8(i+speed, 0, (NOSE_LEDS+FUSE_LEDS)-1), CHSV(i*spread + beat8(1), 200, 255), true);
@@ -776,15 +776,15 @@ void strobe(int style) { // Various strobe patterns
     case 1: // Rapid strobing all LEDS in unison
       switch(currentStep) {
         case 0:
-            fill_solid(Right.leds, wingNavPoint, CRGB::White);
-            fill_solid(Left.leds, wingNavPoint, CRGB::White);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::White);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::White);
             fill_solid(Nose.leds, NOSE_LEDS, CRGB::White);
             fill_solid(Fuse.leds, FUSE_LEDS, CRGB::White);
             fill_solid(Tail.leds, TAIL_LEDS, CRGB::White);
         break;
         case 1:
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
             fill_solid(Nose.leds, NOSE_LEDS, CRGB::Black);
             fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Black);
             fill_solid(Tail.leds, TAIL_LEDS, CRGB::Black);
@@ -796,15 +796,15 @@ void strobe(int style) { // Various strobe patterns
     case 2: // Alternate strobing of left and right wing
       switch (currentStep) {
         case 0:
-            fill_solid(Right.leds, wingNavPoint, CRGB::White);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::White);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
             fill_solid(Nose.leds, NOSE_LEDS, CRGB::Blue);
             fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Blue);
             fill_solid(Tail.leds, TAIL_LEDS, CRGB::White);
         break;
         case 10:
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::White);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::White);
             fill_solid(Nose.leds, NOSE_LEDS, CRGB::Yellow);
             fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Yellow);
             fill_solid(Tail.leds, TAIL_LEDS, CRGB::White);
@@ -817,36 +817,36 @@ void strobe(int style) { // Various strobe patterns
     case 3: // alternate double-blink strobing of left and right wing
       switch(currentStep) {
         case 0: // Right wing on for 50ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::White);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::White);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
         break;
         case 1: // Both wings off for 50ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
         break;
         case 2: // Right wing on for 50ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::White);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::White);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
         break;
         case 3: // Both wings off for 500ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
         break;
         case 13: // Left wing on for 50ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::White);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::White);
         break;
         case 14: // Both wings off for 50ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
         break;
         case 15: // Left wing on for 50ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::White);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::White);
         break;
         case 16: // Both wings off for 500ms
-            fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-            fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+            fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+            fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
         break;
         case 25:
           currentStep = 0;
@@ -1002,14 +1002,14 @@ void altitude(double fake, const CRGBPalette16& palette) { // Altitude indicator
   //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
   if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
   
-  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i < wingNavPoint; i++) {
+  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint); i < Right.stopPoint; i++) {
     Right.set(i, CRGB::Black);
     Left.set(i, CRGB::Black);
   }
   for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
     Fuse.set(i, CRGB::Black);
   }
-  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, wingNavPoint); i++) {
+  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint); i++) {
     if ((i % 2) == 0) {
       Right.set(i, CRGB::White);
       Left.set(i, CRGB::White);
@@ -1102,8 +1102,8 @@ void twinkle1 () { // Random twinkle effect on all LEDs
     memset(pixelStateTail, SteadyDim, sizeof(pixelStateTail));
   }
 
-  doTwinkle1(Right.leds, pixelStateRight, wingNavPoint);
-  doTwinkle1(Left.leds,  pixelStateLeft, wingNavPoint);
+  doTwinkle1(Right.leds, pixelStateRight, Right.stopPoint);
+  doTwinkle1(Left.leds,  pixelStateLeft, Left.stopPoint);
   doTwinkle1(Nose.leds,  pixelStateNose, NOSE_LEDS);
   doTwinkle1(Fuse.leds,  pixelStateFuse, FUSE_LEDS);
   doTwinkle1(Tail.leds,  pixelStateTail, TAIL_LEDS);
@@ -1136,8 +1136,8 @@ void programInit(char progState) { // flashes red/green/white for different prog
       break;
   }
   for (int j = 0; j < 7; j++) {
-    fill_solid(Right.leds, wingNavPoint, color);
-    fill_solid(Left.leds, wingNavPoint, color);
+    fill_solid(Right.leds, Right.stopPoint, color);
+    fill_solid(Left.leds, Left.stopPoint, color);
     fill_solid(Nose.leds, NOSE_LEDS, color);
     fill_solid(Fuse.leds, FUSE_LEDS, color);
     fill_solid(Tail.leds, TAIL_LEDS, color);
@@ -1145,8 +1145,8 @@ void programInit(char progState) { // flashes red/green/white for different prog
     showStrip();
     delay(50);
 
-    fill_solid(Right.leds, wingNavPoint, CRGB::Black);
-    fill_solid(Left.leds, wingNavPoint, CRGB::Black);
+    fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
+    fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
     fill_solid(Nose.leds, NOSE_LEDS, CRGB::Black);
     fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Black);
     fill_solid(Tail.leds, TAIL_LEDS, CRGB::Black);
