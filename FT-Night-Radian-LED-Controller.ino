@@ -1,3 +1,10 @@
+//
+// ---- FT Night Radian LED Controller ----
+//
+// VERSION: 1.2.0
+// DATE:    2020-05-18
+//
+
 #include <FastLED.h>
 #include <Adafruit_BMP280.h>
 #include <EEPROM.h>
@@ -32,7 +39,7 @@
 
 #define NUM_SHOWS_WITH_ALTITUDE 20 // total number of shows. 1+the last caseshow number
 
-#define CONFIG_VERSION 0xAA03 // EEPROM config version (increment this any time the Config struct changes).
+#define CONFIG_VERSION 0xAA03 // EEPROM config version (increment this any time the Config struct or number of shows changes).
 #define CONFIG_START 0 // starting EEPROM address for our config
 
 #define METRIC_CONVERSION 3.3; // 3.3 to convert meters to feet. 1 for meters.
@@ -40,8 +47,6 @@
 #define caseshow(x,y) case x: y; break; // macro for switchcases with a built-in break
 
 uint8_t NUM_SHOWS = NUM_SHOWS_WITH_ALTITUDE; // NUM_SHOWS becomes 1 less if no BMP280 module is installed
-
-// uint8_t wingNavPoint = WING_LEDS; // the end point of the wing leds, depending on navlights being on/off
 
 const uint8_t maxLeds = max(WING_LEDS, max((NOSE_LEDS+FUSE_LEDS), TAIL_LEDS));
 
@@ -68,6 +73,15 @@ int interval; // delay time between each "frame" of an animation
 
 Adafruit_BMP280 bmp; // bmp280 module object
 
+// Class: LED
+// ----------------------------
+//   the main class for the different LED strip objects
+//   this mainly functions as a "wrapper" for the FastLED arrays, with some helpful methods built-in
+//
+//   leds: a pointer to the real FastLED array that we pass in
+//   reversed: whether this strip is "reversed" from normal operation
+//   numLeds: the physical number of LEDs in the strip (and array)
+//   stopPoint: this is where the normal set() function will stop. this is mainly useful for navlights on the wings
 class LED {
 public:
   CRGB* leds;
@@ -75,7 +89,13 @@ public:
   uint8_t numLeds;
   uint8_t stopPoint;
 
-  // constructor, runs when first initialized
+  // Function: LED (class constructor)
+  // ---------------------------------
+  //   runs when class object is initialized
+  //
+  //   *ledArray: pointer to the actual FastLED array this object uses
+  //   num: size of the ledArray
+  //   rev: weather this LED string is "reversed" from normal operation or not
   LED(CRGB * ledarray, uint8_t num, bool rev) {
     reversed = rev;
     numLeds = num;
@@ -83,7 +103,13 @@ public:
     leds = ledarray; // Sets the internal 'leds' pointer to point to the "real" led array
   }
 
-  // regular led assignment
+  // Function: set
+  // -------------
+  //   sets LEDs in this object to the specified color
+  //   also handles reversing and "out-of-bounds" checking
+  //
+  //   led: which LED in the array to modify
+  //   color: a CRGB color to set the LED to
   void set(uint8_t led, const CRGB& color) {
     if (led < stopPoint) {
       if (reversed) {
@@ -94,6 +120,11 @@ public:
     }
   }
 
+  // Function: setNav
+  // ----------------
+  //   sets navlight section of this object to specified color
+  //
+  //   color: a CRGB color to set the navlights to
   void setNav(const CRGB& color) {
     for (uint8_t i = 0; i < WING_NAV_LEDS; i++) {
       if (reversed) { // if reversed, start at the "beginning" of the led string
@@ -104,7 +135,12 @@ public:
     }
   }
 
-  // adds color to existing value
+  // Function: add
+  // -------------
+  //   adds color to existing value
+  //
+  //   led: which LED in the array to modify
+  //   color: a CRGB color to set the LED to
   void add(uint8_t led, const CRGB& color) {
     if (led < stopPoint) {
       if (reversed) {
@@ -115,7 +151,12 @@ public:
     }
   }
 
-  // "or"s the colors, making the led the brighter of the two
+  // Function: addor
+  // ---------------
+  //   "or"s the colors, making the LED the brighter of the two
+  //
+  //   led: which LED in the array to modify
+  //   color: a CRGB color to set the LED to
   void addor(uint8_t led, const CRGB& color) {
     if (led < stopPoint) {
       if (reversed) {
@@ -126,6 +167,12 @@ public:
     }
   }
 
+  // Function: nscale8
+  // -----------------
+  //   fades the whole string down by the specified scale
+  //   used when needing to fade a "trail" to black
+  //
+  //   scale: value from 0-255 to scale the existing colors by
   void nscale8(uint8_t scale) {
     for (uint8_t i = 0; i < stopPoint; i++) {
       if (reversed) {
@@ -136,6 +183,12 @@ public:
     }
   }
 
+  // Function: lerp8
+  // ---------------
+  //   interpolates between existing LED color and specified color
+  //
+  //   other: new color to interpolate towards
+  //   frac: value from 0-255 that specifies how much interpolation happens
   void lerp8(const CRGB& other, uint8_t frac) {
     for (uint8_t i = 0; i < stopPoint; i++) {
       if (reversed) {
@@ -147,12 +200,16 @@ public:
   }
 };
 
+// set up the FastLED array variables
 CRGB rightleds[WING_LEDS];
 CRGB leftleds[WING_LEDS];
 CRGB noseleds[NOSE_LEDS];
 CRGB fuseleds[FUSE_LEDS];
 CRGB tailleds[TAIL_LEDS];
 
+// initialize the LED class objects for each string,
+// passing in the actual array, the length of each string,
+// and if they're reversed or not
 LED Right(rightleds, WING_LEDS, WING_REV);
 LED Left(leftleds, WING_LEDS, WING_REV);
 LED Nose(noseleds, NOSE_LEDS, NOSE_REV);
@@ -216,13 +273,19 @@ DEFINE_GRADIENT_PALETTE( USA ) {           //RGB(255,0,0) RGB(255,255,255) RGB(0
 //  \___|\___| .__/|_|  \___/|_| |_| |_|
 //           |_|                        
 
-struct Config { // this is the main config struct that holds everything we want to save/load from EEPROM
-  uint16_t version;
-  bool navlights;
-  bool enabledShows[NUM_SHOWS_WITH_ALTITUDE];
+// Struct: Config
+// --------------
+//   this is the main config struct that holds everything we want to save/load from EEPROM
+struct Config {
+  uint16_t version; // what version this config struct is
+  bool navlights; // whether navlights are enabled/disabled
+  bool enabledShows[NUM_SHOWS_WITH_ALTITUDE]; // which shows are active/disabled
 } config;
 
-void loadConfig() { // loads existing config from EEPROM, or if wrong version, sets up new defaults and saves them
+// Function: loadConfig
+// --------------------
+//   loads existing config from EEPROM, or if version mismatch, sets up new defaults and saves them
+void loadConfig() {
   EEPROM.get(CONFIG_START, config);
   Serial.println(F("Loading config..."));
   if (config.version != CONFIG_VERSION) { // check if EEPROM version matches this code's version. re-initialize EEPROM if not matching
@@ -238,13 +301,20 @@ void loadConfig() { // loads existing config from EEPROM, or if wrong version, s
   }
 }
 
-void saveConfig() { // saves current config to EEPROM
+// Function: saveConfig
+// --------------------
+//   saves current config to EEPROM
+void saveConfig() { // 
   EEPROM.put(CONFIG_START, config);
   Serial.println(F("Saving config..."));
   updateShowConfig();
 }
 
-void updateShowConfig() { // sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}. also sets nav stop point.
+// Function: updateShowConfig
+// --------------------------
+//   sets order of currently active shows. e.g., activeShowNumbers[] = {1, 4, 5, 9}
+//   also sets nav stop point
+void updateShowConfig() {
   Serial.print(F("Config version: "));
   Serial.println(config.version);
   numActiveShows = 0; // using numActiveShows also as a counter in the for loop to save a variable
@@ -261,11 +331,11 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
     }
   }
   Serial.print(F("Navlights: "));
-  if (config.navlights) {
+  if (config.navlights) { // navlights are on, set stopPoint to (total number) - (number of navlights)
     Right.stopPoint = WING_LEDS - WING_NAV_LEDS;
     Left.stopPoint = WING_LEDS - WING_NAV_LEDS;
     Serial.println(F("on."));
-  } else {
+  } else { // navlights are off, set stopPoint to max number of LEDs
     Right.stopPoint = WING_LEDS;
     Left.stopPoint = WING_LEDS;
     Serial.println(F("off."));
@@ -279,6 +349,9 @@ void updateShowConfig() { // sets order of currently active shows. e.g., activeS
 //  |___/\___|\__|\__,_| .__/  
 //                     |_|     
 
+// Function: setup
+// ---------------
+//   arduino first-run function
 void setup() {
   Serial.begin(115200);
 
@@ -308,6 +381,8 @@ void setup() {
   pinMode(PROGRAM_ENABLE_BTN, INPUT_PULLUP);
   pinMode(RC_PIN1, INPUT);
   pinMode(RC_PIN2, INPUT);
+
+  // initialize FastLED arrays
   FastLED.addLeds<NEOPIXEL, RIGHT_PIN>(Right.leds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, LEFT_PIN>(Left.leds, WING_LEDS);
   FastLED.addLeds<NEOPIXEL, FUSE_PIN>(Fuse.leds, FUSE_LEDS);
@@ -322,6 +397,9 @@ void setup() {
 //  |_| |_| |_|\__,_|_|_| |_| |_|\___/ \___/| .__/  
 //                                          |_|     
 
+// Function: loop
+// --------------
+//   arduino main loop
 void loop() {
   static bool firstrun = true;
   static int programModeCounter = 0;
@@ -381,7 +459,6 @@ void loop() {
     }
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
-
     if (rcInputPort == 0 || rcInputPort == 1) { // if rcInputPort == 0, check both rc input pins until we get a valid signal on one
       currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
       if (currentCh1 > 700 && currentCh1 < 2400) { // do we have a valid signal?
@@ -440,7 +517,12 @@ void loop() {
 //  |___/\__\___| .__/  |___/_| |_|\___/ \_/\_/   
 //              |_|                               
 
-void stepShow() { // this is the main "show rendering" update function. this plays the next "frame" of the current show
+
+// Function: stepShow
+// ------------------
+//   this is the main "show rendering" update function
+//   this plays the next "frame" of the current show
+void stepShow() {
   if (currentShow != prevShow) { // did we just switch to a new show?
     Serial.print(F("Current Show: "));
     Serial.println(currentShow);
@@ -460,8 +542,8 @@ void stepShow() { // this is the main "show rendering" update function. this pla
 
   switch (switchShow) { // activeShowNumbers[] will look like {1, 4, 5, 9}, so this maps to actual show numbers
     caseshow(0,  blank()); // all off except for NAV lights, if enabled
-    caseshow(1,  colorWave1(10, 10));// regular rainbow
-    caseshow(2,  colorWave1(0, 10)); // whole plane solid color rainbow
+    caseshow(1,  colorWave1(10, 10)); // regular rainbow
+    caseshow(2,  colorWave1(0, 10)); // zero led offset, so the whole plane is a solid color rainbow
     caseshow(3,  setColor(CRGB::Red)); // whole plane solid color
     caseshow(4,  setColor(CRGB::Orange));
     caseshow(5,  setColor(CRGB::Yellow));
@@ -474,10 +556,11 @@ void stepShow() { // this is the main "show rendering" update function. this pla
     caseshow(12, strobe(3)); // Realistic double strobe alternating between wings
     caseshow(13, strobe(2)); // Realistic landing-light style alternating between wings
     caseshow(14, strobe(1)); // unrealistic rapid strobe of all non-nav leds, good locator/identifier. also might cause seizures
-    caseshow(15, chase(CRGB::White, CRGB::Black, 50, 80, 35, 80));
+    caseshow(15, chase(CRGB::White, CRGB::Black, 50, 80, 35, 80)); // "chase" effect, with a white streak on a black background
     caseshow(16, cylon(CRGB::Red, CRGB::Black, 30, 50, 30, 50)); // Night Rider/Cylon style red beam scanning back and forth
-    caseshow(17, juggle(4, 8));
-    caseshow(18, animateColor(USA, 4, 1));
+    caseshow(17, juggle(4, 8)); // multiple unique "pulses" of light bouncing back and forth, all with different colors
+    caseshow(18, animateColor(USA, 4, 1)); // sweeps a palette across the whole plane
+
     //altitude needs to be the last show so we can disable it if no BMP280 module is installed
     caseshow(19, altitude(0, variometer)); // first parameter is for testing. 0 for real live data, set to another number for "fake" altitude
   }
@@ -491,20 +574,32 @@ void stepShow() { // this is the main "show rendering" update function. this pla
 //  |_| |_|\___|_| .__/ \___|_|    |_|  \__,_|_| |_|\___|\__|_|\___/|_| |_|___/ 
 //               |_|                                                            
 
-void showStrip () { // wrapper for FastLED.show()
+// Function: showStrip
+// -------------------
+//   wrapper for FastLED.show()
+//   this is in case we need to do anything extra (like set TMP_BRIGHTNESS) before actually calling FastLED.Show()
+void showStrip () {
   #ifdef TMP_BRIGHTNESS
   FastLED.setBrightness(TMP_BRIGHTNESS);
   #endif
   FastLED.show();
 }
 
-void blank() { // Turn off all LEDs
+// Function: blank
+// ---------------
+//   Turn off all LEDs
+void blank() {
   setColor(CRGB::Black);
   interval = 50;
   showStrip();
 }
 
-void setColor(const CRGB& color) { // sets all LEDs to a solid color
+// Function: setColor(CRGB)
+// ------------------
+//   sets all LEDs to a solid color
+//
+//   color: a CRGB color to set the LEDs to
+void setColor(const CRGB& color) {
   fill_solid(Right.leds, Right.stopPoint, color);
   fill_solid(Left.leds, Left.stopPoint, color);
   fill_solid(Nose.leds, NOSE_LEDS, color);
@@ -514,8 +609,15 @@ void setColor(const CRGB& color) { // sets all LEDs to a solid color
   showStrip();
 }
 
-void setColor (const CRGBPalette16& palette) { // spreads a palette across all LEDs
+// Function: setColor(CRGBPalette16)
+// ------------------
+//   spreads a palette across all LEDs
+//
+//   palette: pre-defined CRGBPalette16 object that will be used
+void setColor (const CRGBPalette16& palette) {
   for (int i = 0; i < maxLeds; i++) {
+    // range of 0-240 is used in the map() function due to how the FastLED ColorFromPalette() function works.
+    // 240 is actually the correct "wrap-around" point
     Right.set(i, ColorFromPalette(palette, map(i, 0, Right.stopPoint, 0, 240)));
     Left.set(i, ColorFromPalette(palette, map(i, 0, Left.stopPoint, 0, 240)));
     Tail.set(i, ColorFromPalette(palette, map(i, 0, TAIL_LEDS, 0, 240)));
@@ -530,7 +632,14 @@ void setColor (const CRGBPalette16& palette) { // spreads a palette across all L
   showStrip();
 }
 
-CRGB LetterToColor (char letter) { // Convert the letters in the static patterns to color values
+// Function: LetterToColor
+// -----------------------
+//   convert the letters in the static patterns to color values
+//
+//   letter: a single char string that will become an actual CRGB value
+//
+//   returns: a new CRGB color
+CRGB LetterToColor (char letter) {
   CRGB color;
   switch (letter) {
     case 'r': color = CRGB::Red;
@@ -549,7 +658,12 @@ CRGB LetterToColor (char letter) { // Convert the letters in the static patterns
   return color;
 }
 
-void setPattern (char pattern[]) { // sets wings to a static pattern
+// Function: setPattern
+// --------------------
+//   sets wings to a static pattern
+//
+//   pattern: pre-defined static pattern array
+void setPattern (char pattern[]) {
   for (int i = 0; i < maxLeds; i++) {
     Right.set(i, LetterToColor(pattern[i]));
     Left.set(i, LetterToColor(pattern[i]));
@@ -558,7 +672,10 @@ void setPattern (char pattern[]) { // sets wings to a static pattern
   showStrip();
 }
 
-void setInitPattern () { // set all LEDs to the static init pattern
+// Function: setInitPattern
+// ------------------------
+//   set all LEDs to the static init pattern
+void setInitPattern () {
   for (int i = 0; i < WING_LEDS; i++) {
     Right.set(i, LetterToColor(init_rightwing[i]));
   }
@@ -582,11 +699,18 @@ void setInitPattern () { // set all LEDs to the static init pattern
   showStrip();
 }
 
-void animateColor (const CRGBPalette16& palette, int ledOffset, int stepSize) { // animates a palette across all LEDs
-  if (currentStep > 255) {currentStep -= 255;}
+// Function: animateColor
+// ----------------------
+//   animates a palette across all LEDs
+//
+//   palette: pre-defined CRGBPalette16 object that will be used
+//   ledOffset: how much each led is offset in the palette compared to the previous led
+//   stepSize: how fast the leds will cycle through the palette
+void animateColor (const CRGBPalette16& palette, int ledOffset, int stepSize) {
+  if (currentStep > 255) {currentStep -= 256;}
   for (uint8_t i = 0; i < maxLeds; i++) {
-    int j = triwave8((i * ledOffset) + currentStep);
-    CRGB color = ColorFromPalette(palette, scale8(j, 240));
+    // scale to 240 again because that's the correct "wrap" point for ColorFromPalette()
+    CRGB color = ColorFromPalette(palette, scale8(triwave8((i * ledOffset) + currentStep), 240));
     Right.set(i, color);
     Left.set(i, color);
     Tail.set(i, color);
@@ -603,15 +727,23 @@ void animateColor (const CRGBPalette16& palette, int ledOffset, int stepSize) { 
   showStrip();
 }
 
+// Function: setNoseFuse
+// ---------------------
+//   sets leds along nose and fuse as if they were the same strip
+//   range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1)
+//
+//   led: which LED to modify
+//   color: a CRGB color to set the LED to
+//   (optional) addor: set true to "or" the new led color with the old value. if not set, defaults to false
 void setNoseFuse(uint8_t led, const CRGB& color) { setNoseFuse(led, color, false); } // overload for simple setting of leds
-void setNoseFuse(uint8_t led, const CRGB& color, bool addor) { // sets leds along nose and fuse as if they were the same strip. range is 0 - ((NOSE_LEDS+FUSE_LEDS)-1). addor = true to "or" the new led color with the old value
-  if (led < NOSE_LEDS) {
+void setNoseFuse(uint8_t led, const CRGB& color, bool addor) {
+  if (led < NOSE_LEDS) { // less than NOSE_LEDS, set the nose
     if (addor) {
       Nose.addor(led, color);
     } else {
       Nose.set(led, color);
     }
-  } else {
+  } else { // greater than NOSE_LEDS, set fuse (minus NOSE_LEDS)
     if (addor) {
       Fuse.addor(led-NOSE_LEDS, color);
     } else {
@@ -620,15 +752,23 @@ void setNoseFuse(uint8_t led, const CRGB& color, bool addor) { // sets leds alon
   }
 }
 
-void setBothWings(uint8_t led, const CRGB& color) { setBothWings(led, color, false); }// overload for simple setting of leds
-void setBothWings(uint8_t led, const CRGB& color, bool addor) { // sets leds along both wings as if they were the same strip. range is 0 - ((stopPoint*2)-1). left.stopPoint = 0, right.stopPoint = max. addor = true to "or" the new led color with the old value
-  if (led < Left.stopPoint) {
+// Function: setBothWings
+// ----------------------
+//   sets leds along both wings as if they were the same strip
+//   range is 0 - ((stopPoint*2)-1). left.stopPoint = 0, right.stopPoint = max
+//
+//   led: which LED to modify
+//   color: a CRGB color to set the LED to
+//   (optional) addor: set true to "or" the new led color with the old value. if not set, defaults to false
+void setBothWings(uint8_t led, const CRGB& color) { setBothWings(led, color, false); } // overload for simple setting of leds
+void setBothWings(uint8_t led, const CRGB& color, bool addor) {
+  if (led < Left.stopPoint) { // less than left size, set left wing, but "reversed" (start at outside)
     if (addor) {
       Left.addor(Left.stopPoint - led - 1, color);
     } else {
       Left.set(Left.stopPoint - led - 1, color);
     }
-  } else {
+  } else { // greater than left size, set right wing
     if (addor) {
       Right.addor(led - Left.stopPoint, color);
     } else {
@@ -643,9 +783,17 @@ void setBothWings(uint8_t led, const CRGB& color, bool addor) { // sets leds alo
 //  | (_| | | | | | | | | | | (_| | |_| | (_) | | | \__ \ 
 //   \__,_|_| |_|_|_| |_| |_|\__,_|\__|_|\___/|_| |_|___/ 
 
-void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
+// Function: colorWave1
+// --------------------
+//   rainbow pattern
+//
+//   ledOffset: how much each led is offset in the rainbow compared to the previous led
+//   l_interval: sets interval for this show
+void colorWave1 (uint8_t ledOffset, uint8_t l_interval) {
   if (currentStep > 255) {currentStep = 0;}
+  // FIXME: is this actually working on the wings? 0-maxLeds, but using setBothWings...
   for (uint8_t i = 0; i < maxLeds; i++) {
+    // the CHSV() function uses uint8_t, so wrap-around is already taken care of
     CRGB color = CHSV(currentStep + (ledOffset * i), 255, 255);
     setBothWings(i, color);
     Tail.set(i, color);
@@ -661,22 +809,35 @@ void colorWave1 (uint8_t ledOffset, uint8_t l_interval) { // Rainbow pattern
   showStrip();
 }
 
+// Function: chase/cylon
+// ---------------------
+//   LED chase functions with fadeout of the tail
+//   can do more traditional same-direction chase, or back-and-forth "cylon/knight-rider" style
+//
+//   color1: "main" color of the chase effect
+//   color2: "background" color
+//   speedWing: chase speed of the wing leds
+//   speedNose: chase speed of the nose leds
+//   speedFuse: chase speed of the fuse leds
+//   speedTail: chase speed of the tail leds
+//   (optional) cylon: if this is set, does back-and-forth effect. regular chase otherwise. overloads set this.
 void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail) { // overload to do a chase pattern
   chase(color1, color2, speedWing, speedNose, speedFuse, speedTail, false);
 }
-
-void cylon(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail) { // overload to do a cylon pattern
+// overload to do a cylon pattern
+void cylon(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail) {
   chase(color1, color2, speedWing, speedNose, speedFuse, speedTail, true);
 }
-
-void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail, bool cylon) { // main chase function. can do either chase or cylon patterns
-  if (color2 == (CRGB)CRGB::Black) {
+// main chase function. can do either chase or cylon patterns
+void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t speedNose, uint8_t speedFuse, uint8_t speedTail, bool cylon) {
+  // fade out the whole string to get a nice fading "trail"
+  if (color2 == (CRGB)CRGB::Black) { // if our second color is black, do nscale8, because lerp never gets there
     Right.nscale8(192);
     Left.nscale8(192);
     Fuse.nscale8(192);
     Nose.nscale8(192);
     Tail.nscale8(192);
-  } else {
+  } else { // otherwise, just lerp between the colors 
     Right.lerp8(color2, 20);
     Left.lerp8(color2, 20);
     Fuse.lerp8(color2, 20);
@@ -685,6 +846,7 @@ void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t sp
   }
 
   if (cylon == true) {
+    // cylon uses both wings, and triwave to get a nice back-and-forth
     setBothWings(scale8(triwave8(beat8(speedWing)), (Right.stopPoint+Left.stopPoint)-1), color1);
     Tail.set(scale8(triwave8(beat8(speedTail)), TAIL_LEDS-1), color1);
     if (NOSE_FUSE_JOINED) {
@@ -694,6 +856,7 @@ void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t sp
       Fuse.set(scale8(triwave8(beat8(speedFuse)), FUSE_LEDS-1), color1);
     }
   } else {
+    // chase just goes "out" in the same directions
     Right.set(scale8(beat8(speedWing), Right.stopPoint-1), color1);
     Left.set(scale8(beat8(speedWing), Left.stopPoint-1), color1);
     Tail.set(scale8(beat8(speedTail), TAIL_LEDS-1), color1);
@@ -709,9 +872,16 @@ void chase(const CRGB& color1, const CRGB& color2, uint8_t speedWing, uint8_t sp
   showStrip();
 }
 
-void juggle(uint8_t numPulses, uint8_t speed) { // a few "pulses" of light that bounce back and forth at different timings
+// Function: juggle
+// ----------------
+//   a few "pulses" of light that bounce back and forth at different timings
+//
+//   numPulses: how many unique pulses per string
+//   speed: how fast the pulses move back and forth
+void juggle(uint8_t numPulses, uint8_t speed) {
   uint8_t spread = 256 / numPulses;
 
+  // fade out the whole string to get a nice fading "trail"
   Right.nscale8(192);
   Left.nscale8(192);
   Fuse.nscale8(192);
@@ -719,7 +889,8 @@ void juggle(uint8_t numPulses, uint8_t speed) { // a few "pulses" of light that 
   Tail.nscale8(192);
 
   for (uint8_t i = 0; i < numPulses; i++) {
-    setBothWings(beatsin8(i+speed, 0, (Right.stopPoint+Left.stopPoint)-1), CHSV(i*spread + beat8(1), 200, 255), true); // setBothWings(..., true) does led[i] |= color, so colors add when overlapping
+    // use addor on everything, so colors add when overlapping
+    setBothWings(beatsin8(i+speed, 0, (Right.stopPoint+Left.stopPoint)-1), CHSV(i*spread + beat8(1), 200, 255), true);
     Tail.addor(beatsin8(i+speed, 0, TAIL_LEDS-1), CHSV(i*spread + beat8(1), 200, 255));
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(beatsin8(i+speed, 0, (NOSE_LEDS+FUSE_LEDS)-1), CHSV(i*spread + beat8(1), 200, 255), true);
@@ -733,7 +904,10 @@ void juggle(uint8_t numPulses, uint8_t speed) { // a few "pulses" of light that 
   showStrip();
 }
 
-void navLights() { // persistent nav lights
+// Function: navLights
+// -------------------
+//   main function that animates the persistent navlights
+void navLights() {
 static uint8_t navStrobeState = 0;
   switch(navStrobeState) {
     case 0:
@@ -767,9 +941,15 @@ static uint8_t navStrobeState = 0;
   navStrobeState++;
 }
 
-// TODO: Test out the new timing system.
-//       I'm leaving the current code commented until I know this new one works
-void strobe(int style) { // Various strobe patterns
+// Function: strobe
+// ----------------
+//   various strobe patterns
+//
+//   style: which strobe style to use
+//     1: rapid strobing all LEDS in unison. bad. might cause seizures
+//     2: alternate strobing of left and right wing
+//     3: alternate double-blink strobing of left and right wing
+void strobe(int style) {
   static bool StrobeState = true;
 
   switch(style) {
@@ -855,138 +1035,19 @@ void strobe(int style) { // Various strobe patterns
     break;
   }
 
-  // switch(style) {
-
-  //   case 1: //Rapid strobing all LEDS in unison
-  //     if (StrobeState) {
-  //       for (int i = 0; i < wingNavPoint; i++) {
-  //         Right.set(i, CRGB::White);
-  //         Left.set(i, CRGB::White);
-  //       }
-  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::White);}
-  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::White);}
-  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
-  //       StrobeState = false;
-  //     } else {
-  //       for (int i = 0; i < wingNavPoint; i++) {
-  //         Right.set(i, CRGB::Black);
-  //         Left.set(i, CRGB::Black);
-  //       }
-  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Black);}
-  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Black);}
-  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::Black);}
-  //       StrobeState = true;
-  //       }
-  //     interval = 50;
-  //     showStrip();
-  //   break;
-
-  //   case 2: //Alternate strobing of left and right wing
-  //     if (StrobeState) {
-  //       for (int i = 0; i < wingNavPoint; i++) {
-  //         Right.set(i, CRGB::White);
-  //         Left.set(i, CRGB::Black);
-  //       }
-  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Blue);}
-  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Blue);}
-  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
-  //     } else {
-  //       for (int i = 0; i < wingNavPoint; i++) {
-  //         Right.set(i, CRGB::Black);
-  //         Left.set(i, CRGB::White);
-  //       }
-  //       for (int i = 0; i < NOSE_LEDS; i++) {Nose.set(i, CRGB::Yellow);}
-  //       for (int i = 0; i < FUSE_LEDS; i++) {Fuse.set(i, CRGB::Yellow);}
-  //       for (int i = 0; i < TAIL_LEDS; i++) {Tail.set(i, CRGB::White);}
-  //     }
-  //     interval = 500;
-  //     StrobeState = !StrobeState;
-  //     showStrip();
-  //   break;
-
-  //   case 3: //alternate double-blink strobing of left and right wing
-
-  //     switch(currentStep) {
-
-  //       case 0: // Right wing on for 50ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::White);
-  //           Left.set(i, CRGB::Black);
-  //         }
-  //         interval = 50;
-  //       break;
-          
-  //       case 1: // Both wings off for 50ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::Black);
-  //           Left.set(i, CRGB::Black);
-  //         }
-  //         interval = 50;
-  //       break;
-          
-  //       case 2: // Right wing on for 50ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::White);
-  //           Left.set(i, CRGB::Black);
-  //         }
-  //         interval = 50;
-  //       break;
-          
-  //       case 3: // Both wings off for 500ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::Black);
-  //           Left.set(i, CRGB::Black);
-  //         }
-  //         interval = 500;
-  //       break;
-          
-  //       case 4: // Left wing on for 50ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::Black);
-  //           Left.set(i, CRGB::White);
-  //         }
-  //         interval = 50;
-  //       break;
-          
-  //       case 5: // Both wings off for 50ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::Black);
-  //           Left.set(i, CRGB::Black);
-  //         }
-  //         interval = 50;
-  //       break;
-          
-  //       case 6: // Left wing on for 50ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::Black);
-  //           Left.set(i, CRGB::White);
-  //         }
-  //         interval = 50;
-  //       break;
-          
-  //       case 7: // Both wings off for 500ms
-  //         for (int i = 0; i < wingNavPoint; i++) {
-  //           Right.set(i, CRGB::Black);
-  //           Left.set(i, CRGB::Black);
-  //         }
-  //         interval = 500;
-  //       break;
-                    
-  //     }
-
-  //     showStrip();
-  //     currentStep++;
-  //     if (currentStep == 8) {currentStep = 0;}
-  //   break;
-
-  // }
-
   interval = 50;
   currentStep++;
   showStrip();
 }
 
-void altitude(double fake, const CRGBPalette16& palette) { // Altitude indicator show. wings fill up to indicate altitude, tail goes green/red as variometer
+// Function: altitude
+// ------------------
+//   altitude indicator show
+//   wings fill up to indicate altitude, tail goes green/red as variometer
+//
+//   fake: set to 0 for real data, anything else for testing
+//   palette: gradient palette for the visual variometer on the tail
+void altitude(double fake, const CRGBPalette16& palette) {
   static double prevAlt;
   static int avgVSpeed[] = {0,0,0,0};
 
@@ -1050,8 +1111,19 @@ void altitude(double fake, const CRGBPalette16& palette) { // Altitude indicator
   showStrip();
 }
 
+// Enum: twinkle
+// ----------------------------
+//   some named "states" for the twinkle functions
 enum {SteadyDim, Dimming, Brightening};
-void doTwinkle1(CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper function for the twinkle show
+
+// Function: doTwinkle1
+// --------------------
+//   helper function for the twinkle show
+//
+//   ledArray: pointer to the led array we're modifying
+//   pixelState: pointer to the array that holds state info for the led array
+//   size: size of the led array
+void doTwinkle1(CRGB * ledArray, uint8_t * pixelState, uint8_t size) {
   const CRGB colorDown = CRGB(1, 1, 1);
   const CRGB colorUp = CRGB(8, 8, 8);
   const CRGB colorMax = CRGB(128, 128, 128);
@@ -1060,6 +1132,7 @@ void doTwinkle1(CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper
 
   for (int i = 0; i < size; i++) {
     if (pixelState[i] == SteadyDim) {
+      // if the pixel is steady dim, it has a random change to start brightening
       if (random8() < twinkleChance) {
         pixelState[i] = Brightening;
       }
@@ -1069,6 +1142,7 @@ void doTwinkle1(CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper
     }
 
     if (pixelState[i] == Brightening) {
+      // if it's brightening, once max, start dimming. otherwise keep going up
       if (ledArray[i] >= colorMax) {
         pixelState[i] = Dimming;
       } else {
@@ -1077,6 +1151,7 @@ void doTwinkle1(CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper
     }
 
     if (pixelState[i] == Dimming) {
+      // if dimming, once all the way dim, stop. otherwise, keep dimming
       if (ledArray[i] <= colorMin) {
         ledArray[i] = colorMin;
         pixelState[i] = SteadyDim;
@@ -1087,7 +1162,11 @@ void doTwinkle1(CRGB * ledArray, uint8_t * pixelState, uint8_t size) { // helper
   }
 }
 
-void twinkle1 () { // Random twinkle effect on all LEDs
+// Function: twinkle1
+// ----------------------------
+//   random twinkle effect on all LEDs
+void twinkle1 () {
+  // arrays to hold the "state" of each LED of each strip
   static uint8_t pixelStateRight[WING_LEDS];
   static uint8_t pixelStateLeft[WING_LEDS];
   static uint8_t pixelStateNose[NOSE_LEDS];
@@ -1112,7 +1191,12 @@ void twinkle1 () { // Random twinkle effect on all LEDs
   showStrip();
 }
 
-void programInit(bool progState) { // overload, takes a bool and flashes red/green depending on true or not
+// Function: programInit(bool)
+// ----------------------------
+//   flashes red/green/white for different program mode indicators
+//
+//   progState: true/false flashes all leds green/red respectively
+void programInit(bool progState) {
   if (progState) {
     Serial.println(F("enabled."));
     programInit('g');
@@ -1122,7 +1206,12 @@ void programInit(bool progState) { // overload, takes a bool and flashes red/gre
   }
 }
 
-void programInit(char progState) { // flashes red/green/white for different program mode indicators
+// Function: programInit(char)
+// ----------------------------
+//   flashes red/green/white for different program mode indicators
+//
+//   progState: single char ('w', 'g', or 'r') that specifies what color to flassh all leds
+void programInit(char progState) {
   CRGB color;
   switch (progState) {
     case 'w':
