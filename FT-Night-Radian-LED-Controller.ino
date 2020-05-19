@@ -791,11 +791,12 @@ void setBothWings(uint8_t led, const CRGB& color, bool addor) {
 //   l_interval: sets interval for this show
 void colorWave1 (uint8_t ledOffset, uint8_t l_interval) {
   if (currentStep > 255) {currentStep = 0;}
-  // FIXME: is this actually working on the wings? 0-maxLeds, but using setBothWings...
+  for (uint8_t i = 0; i < Left.stopPoint + Right.stopPoint; i++) {
+    setBothWings(i, CHSV(currentStep + (ledOffset * i), 255, 255));
+  }
   for (uint8_t i = 0; i < maxLeds; i++) {
     // the CHSV() function uses uint8_t, so wrap-around is already taken care of
     CRGB color = CHSV(currentStep + (ledOffset * i), 255, 255);
-    setBothWings(i, color);
     Tail.set(i, color);
     if (NOSE_FUSE_JOINED) {
       setNoseFuse(i, color);
@@ -950,8 +951,6 @@ static uint8_t navStrobeState = 0;
 //     2: alternate strobing of left and right wing
 //     3: alternate double-blink strobing of left and right wing
 void strobe(int style) {
-  static bool StrobeState = true;
-
   switch(style) {
     case 1: // Rapid strobing all LEDS in unison
       switch(currentStep) {
@@ -968,7 +967,7 @@ void strobe(int style) {
             fill_solid(Nose.leds, NOSE_LEDS, CRGB::Black);
             fill_solid(Fuse.leds, FUSE_LEDS, CRGB::Black);
             fill_solid(Tail.leds, TAIL_LEDS, CRGB::Black);
-          currentStep = 0;
+          currentStep = -1;
         break;
       }
     break;
@@ -990,7 +989,7 @@ void strobe(int style) {
             fill_solid(Tail.leds, TAIL_LEDS, CRGB::White);
         break;
         case 19:
-          currentStep = 0;
+          currentStep = -1;
         break;
       }
     break;
@@ -1029,7 +1028,7 @@ void strobe(int style) {
             fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
         break;
         case 25:
-          currentStep = 0;
+          currentStep = -1;
         break;
     }
     break;
