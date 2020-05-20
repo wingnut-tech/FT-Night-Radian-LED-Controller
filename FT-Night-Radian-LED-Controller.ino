@@ -436,7 +436,7 @@ void loop() {
         // store current program values into eeprom
         saveConfig();
         programModeCounter = 0;
-        programInit('w'); //strobe the leds to indicate leaving program mode
+        statusFlash('w'); //strobe the leds to indicate leaving program mode
       }
     } else { // button not pressed
       if (programModeCounter > 0 && programModeCounter < 1000) { // a momentary press to cycle to the next program
@@ -451,9 +451,14 @@ void loop() {
     } else { // button not pressed
       if (enableCounter > 0 && enableCounter < 1000) { // momentary press to toggle the current show
         // toggle the state of the current program on/off
-        if (config.enabledShows[currentShow] == true) {config.enabledShows[currentShow] = false;}
-        else {config.enabledShows[currentShow] = true;}
-        programInit(config.enabledShows[currentShow]);
+        if (config.enabledShows[currentShow] == true) {
+          config.enabledShows[currentShow] = false;
+          Serial.println(F("disabled"));
+        } else {
+          config.enabledShows[currentShow] = true;
+          Serial.println(F("enabled"));
+        }
+        statusFlash(config.enabledShows[currentShow]);
       }
       enableCounter = 0;
     }
@@ -462,14 +467,20 @@ void loop() {
     if (rcInputPort == 0 || rcInputPort == 1) { // if rcInputPort == 0, check both rc input pins until we get a valid signal on one
       currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
       if (currentCh1 > 700 && currentCh1 < 2400) { // do we have a valid signal?
-        if (rcInputPort == 0) {rcInputPort = 1;} // if we were on "either" port mode, switch it to 1
+        if (rcInputPort == 0) {
+          rcInputPort = 1; // if we were on "either" port mode, switch it to 1
+          statusFlash('w', 1, 300); // flash white once for RC input 1
+        }
         currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 950us - 1980us  to 0 - (numActiveShows-1). might still need timing tweaks.
       }
     }
     if (rcInputPort == 0 || rcInputPort == 2) { // RC_PIN2 is our 2-position-switch autoscroll mode
       currentCh2 = pulseIn(RC_PIN2, HIGH, 25000);  // (Pin, State, Timeout)
       if (currentCh2 > 700 && currentCh2 < 2400) { // valid signal?
-        if (rcInputPort == 0) {rcInputPort = 2;} // if we were on "either" port mode, switch it to 2
+        if (rcInputPort == 0) {
+          rcInputPort = 2; // if we were on "either" port mode, switch it to 2
+          statusFlash('w', 2, 300); // flash white twice for RC input 2
+        }
         if (currentCh2 > 1500) {
           // switch is "up" (above 1500), auto-scroll through shows
           if (currentMillis - prevAutoMillis > 2000) { // auto-advance after 2 seconds
@@ -481,6 +492,9 @@ void loop() {
         }
       }
     }
+    if (rcInputPort == 0) {
+      statusFlash('r', 1, 300); // flash red to indicate no signal
+    }
     currentShow = currentShow % numActiveShows; // keep currentShow within the limits of our active shows
     
     // Are we entering program mode?
@@ -490,9 +504,9 @@ void loop() {
         programMode = true;
         programModeCounter = 0;
         Serial.println(F("Entering program mode"));
-        programInit('w'); //strobe the leds to indicate entering program mode
+        statusFlash('w'); //strobe the leds to indicate entering program mode
         currentShow = 0;
-        programInit(config.enabledShows[currentShow]);
+        statusFlash(config.enabledShows[currentShow]);
       }
     } else if (digitalRead(PROGRAM_ENABLE_BTN) == LOW) { // Program button not pressed, but is Enable/Disable button pressed?
       programModeCounter = programModeCounter + (currentMillis - progMillis);
@@ -529,7 +543,7 @@ void stepShow() {
     currentStep = 0; // reset the global general-purpose counter
     blank();
     if (programMode) { // if we're in program mode and just switched, indicate show status
-      programInit(config.enabledShows[currentShow]); //flash all LEDs red/green to indicate current show status
+      statusFlash(config.enabledShows[currentShow]); //flash all LEDs red/green to indicate current show status
     }
   }
 
@@ -1190,29 +1204,33 @@ void twinkle1 () {
   showStrip();
 }
 
-// Function: programInit(bool)
+// Function: statusFlash(bool) overload
 // ----------------------------
-//   flashes red/green/white for different program mode indicators
+//   calls the main statusFlash function with default timing and true/false color
 //
-//   progState: true/false flashes all leds green/red respectively
-void programInit(bool progState) {
-  if (progState) {
-    Serial.println(F("enabled."));
-    programInit('g');
-  } else {
-    Serial.println(F("disabled."));
-    programInit('r');
-  }
+//   status: true/false flashes all leds green/red respectively
+void statusFlash(bool status) {
+  if (status) { statusFlash('g', 4, 50); }
+  else { statusFlash('r', 4, 50); }
 }
 
-// Function: programInit(char)
+// Function: statusFlash(char) overload
+// ----------------------------
+//   calls the main statusFlash function with default timing and specified color
+//
+//   status: letter ('w', 'g', or 'r') of the color to flash
+void statusFlash(char status) { statusFlash(status, 4, 50); }
+
+// Function: statusFlash
 // ----------------------------
 //   flashes red/green/white for different program mode indicators
 //
-//   progState: single char ('w', 'g', or 'r') that specifies what color to flassh all leds
-void programInit(char progState) {
+//   status: single char ('w', 'g', or 'r') that specifies what color to flassh all leds
+//   numFlashes: how many on/off cycles to do
+//   delay_time: delay after both the 'on' and 'off' states
+void statusFlash(char status, uint8_t numFlashes, int delay_time) {
   CRGB color;
-  switch (progState) {
+  switch (status) {
     case 'w':
       color = CRGB::White;
       break;
@@ -1223,7 +1241,7 @@ void programInit(char progState) {
       color = CRGB::Red;
       break;
   }
-  for (int j = 0; j < 7; j++) {
+  for (int j = 0; j < numFlashes; j++) {
     fill_solid(Right.leds, Right.stopPoint, color);
     fill_solid(Left.leds, Left.stopPoint, color);
     fill_solid(Nose.leds, NOSE_LEDS, color);
@@ -1231,7 +1249,7 @@ void programInit(char progState) {
     fill_solid(Tail.leds, TAIL_LEDS, color);
     digitalWrite(LED_BUILTIN, HIGH);
     showStrip();
-    delay(50);
+    delay(delay_time);
 
     fill_solid(Right.leds, Right.stopPoint, CRGB::Black);
     fill_solid(Left.leds, Left.stopPoint, CRGB::Black);
@@ -1240,7 +1258,7 @@ void programInit(char progState) {
     fill_solid(Tail.leds, TAIL_LEDS, CRGB::Black);
     digitalWrite(LED_BUILTIN, LOW);
     showStrip();
-    delay(50);
+    delay(delay_time);
   }
   digitalWrite(LED_BUILTIN, LOW);
 }
