@@ -16,7 +16,7 @@
 
 //#define TMP_BRIGHTNESS 55 // uncomment to override brightness for testing
 
-#define MAX_ALTIMETER 400
+#define MAX_ALTIMETER 600
 
 // define the pins that the buttons are connected to
 
