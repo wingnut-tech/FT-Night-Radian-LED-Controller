@@ -1,8 +1,8 @@
 //
 // ---- FT Night Radian LED Controller ----
 //
-// VERSION: 1.2.0
-// DATE:    2020-05-18
+// VERSION: 1.2.1
+// DATE:    2020-05-20
 //
 
 #include <FastLED.h>
