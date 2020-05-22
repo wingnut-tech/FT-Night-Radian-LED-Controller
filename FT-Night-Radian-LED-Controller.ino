@@ -4,6 +4,7 @@
 // VERSION: 1.2.1
 // DATE:    2020-05-20
 //
+#define FASTLED_INTERNAL // disables the FastLED version message that looks like an error
 
 #include <FastLED.h>
 #include <Adafruit_BMP280.h>
