@@ -73,6 +73,7 @@ unsigned long progMillis = 0; // keeps track of last millis value for button pre
 int interval; // delay time between each "frame" of an animation
 
 Adafruit_BMP280 bmp; // bmp280 module object
+bool hasBMP280 = false; // did we detect a BMP280 module?
 
 // Class: LED
 // ----------------------------
@@ -362,6 +363,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
 
   if (bmp.begin(0x76)) { // initialize the altitude pressure sensor with I2C address 0x76
+    hasBMP280 = true;
     Serial.println(F("BMP280 module found."));
     bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                     Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
@@ -471,6 +473,7 @@ void loop() {
         if (rcInputPort == 0) {
           rcInputPort = 1; // if we were on "either" port mode, switch it to 1
           statusFlash('w', 1, 300); // flash white once for RC input 1
+          statusFlash(hasBMP280, 1, 300); // indicate BMP280 module present
         }
         currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 950us - 1980us  to 0 - (numActiveShows-1). might still need timing tweaks.
       }
@@ -481,6 +484,7 @@ void loop() {
         if (rcInputPort == 0) {
           rcInputPort = 2; // if we were on "either" port mode, switch it to 2
           statusFlash('w', 2, 300); // flash white twice for RC input 2
+          statusFlash(hasBMP280, 1, 300); // indicate BMP280 module present
         }
         if (currentCh2 > 1500) {
           // switch is "up" (above 1500), auto-scroll through shows
@@ -1205,25 +1209,25 @@ void twinkle1 () {
   showStrip();
 }
 
-// Function: statusFlash(bool) overload
-// ----------------------------
-//   calls the main statusFlash function with default timing and true/false color
-//
-//   status: true/false flashes all leds green/red respectively
+// Function: statusFlash overloads
+// -------------------------------
+//   various overload versions of the statusFlash function
 void statusFlash(bool status) {
   if (status) { statusFlash('g', 4, 50); }
   else { statusFlash('r', 4, 50); }
 }
 
-// Function: statusFlash(char) overload
-// ----------------------------
-//   calls the main statusFlash function with default timing and specified color
-//
-//   status: letter ('w', 'g', or 'r') of the color to flash
-void statusFlash(char status) { statusFlash(status, 4, 50); }
+void statusFlash(bool status, uint8_t numFlashes, int delay_time) {
+  if (status) { statusFlash('g', numFlashes, delay_time); }
+  else { statusFlash('r', numFlashes, delay_time); }
+}
+
+void statusFlash(char status) {
+  statusFlash(status, 4, 50);
+}
 
 // Function: statusFlash
-// ----------------------------
+// ---------------------
 //   flashes red/green/white for different program mode indicators
 //
 //   status: single char ('w', 'g', or 'r') that specifies what color to flassh all leds
