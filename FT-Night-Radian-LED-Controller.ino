@@ -1,8 +1,8 @@
 //
 // ---- FT Night Radian LED Controller ----
 //
-// VERSION: 1.2.1
-// DATE:    2020-05-20
+// VERSION: 1.2.2
+// DATE:    2020-06-07
 //
 #define FASTLED_INTERNAL // disables the FastLED version message that looks like an error
 
@@ -475,7 +475,7 @@ void loop() {
           statusFlash('w', 1, 300); // flash white once for RC input 1
           statusFlash(hasBMP280, 1, 300); // indicate BMP280 module present
         }
-        currentShow = map(currentCh1, 950, 1980, 0, numActiveShows-1); // mapping 950us - 1980us  to 0 - (numActiveShows-1). might still need timing tweaks.
+        currentShow = map(currentCh1, 950, 1960, 0, numActiveShows-1); // mapping 950us - 1960us  to 0 - (numActiveShows-1). might still need timing tweaks.
       }
     }
     if (rcInputPort == 0 || rcInputPort == 2) { // RC_PIN2 is our 2-position-switch autoscroll mode
