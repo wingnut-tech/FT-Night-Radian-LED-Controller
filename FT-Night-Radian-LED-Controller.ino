@@ -17,7 +17,7 @@
 
 //#define TMP_BRIGHTNESS 55 // uncomment to override brightness for testing
 
-#define MAX_ALTIMETER 600
+#define MAX_ALTIMETER 400
 
 // define the pins that the buttons are connected to
 
@@ -1078,34 +1078,36 @@ void altitude(double fake, const CRGBPalette16& palette) {
   
   if (fake != 0) {currentAlt = fake;}
 
-  //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
-  if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
-  
-  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint); i < Right.stopPoint; i++) {
-    Right.set(i, CRGB::Black);
-    Left.set(i, CRGB::Black);
-  }
-  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
-    Fuse.set(i, CRGB::Black);
-  }
-  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint); i++) {
-    if ((i % 2) == 0) {
-      Right.set(i, CRGB::White);
-      Left.set(i, CRGB::White);
-    } else {
-      Right.set(i, CRGB::Green);
-      Left.set(i, CRGB::Green);
+  // take currentAlt, clamp and scale it to strip size, multiply by 2 so we can "overflow" and indicate when over MAX_ALTITUDE
+  uint8_t scaledWings = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint), 0, Right.StopPoint) * 2;
+  uint8_t scaledFuse = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Fuse.stopPoint), 0, Fuse.StopPoint) * 2;
+
+  for (uint8_t i = 0; i < Right.stopPoint; i++) {
+    CRGB color = CRGB::Black;
+    if (i < scaledWings) {
+      if (i < (scaledWings - Right.stopPoint)) {
+        color = CRGB::Orange;
+      } else {
+        color = CRGB::White;
+      }
     }
-  }
-  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
-    if ((i % 2) == 0) {
-      Fuse.set(i, CRGB::White);
-    } else {
-      Fuse.set(i, CRGB::Green);
-    }
+    Right.set(i, color);
+    Left.set(i, color);
   }
 
-  //map vertical speed value to gradient palette
+  for (uint8_t i = 0; i < Fuse.stopPoint; i++) {
+    CRGB color = CRGB::Black;
+    if (i < scaledFuse) {
+      if (i < (scaledFuse - Fuse.stopPoint)) {
+        color = CRGB::Orange;
+      } else {
+        color = CRGB::White;
+      }
+    }
+    Fuse.set(i, color);
+  }
+
+  // map vertical speed value to gradient palette
   int vspeedMap;
   avgVSpeed[0]=avgVSpeed[1];
   avgVSpeed[1]=avgVSpeed[2];
