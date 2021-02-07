@@ -17,7 +17,9 @@
 
 //#define TMP_BRIGHTNESS 55 // uncomment to override brightness for testing
 
-#define MAX_ALTIMETER 400
+// this is "double" the actual alt limit.
+// wings/fuse fill up to half this value, then "overflow" a red/orange color.
+#define MAX_ALTIMETER 800
 
 // define the pins that the buttons are connected to
 
@@ -1078,15 +1080,15 @@ void altitude(double fake, const CRGBPalette16& palette) {
   
   if (fake != 0) {currentAlt = fake;}
 
-  // take currentAlt, clamp and scale it to strip size, multiply by 2 so we can "overflow" and indicate when over MAX_ALTITUDE
-  uint8_t scaledWings = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint), 0, Right.StopPoint) * 2;
-  uint8_t scaledFuse = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Fuse.stopPoint), 0, Fuse.StopPoint) * 2;
+  // take currentAlt, clamp and scale it to strip size * 2, so we can "overflow" and indicate when over the altitude limit
+  uint8_t scaledWings = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint * 2), 0, Right.stopPoint * 2);
+  uint8_t scaledFuse = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Fuse.stopPoint * 2), 0, Fuse.stopPoint * 2);
 
   for (uint8_t i = 0; i < Right.stopPoint; i++) {
     CRGB color = CRGB::Black;
     if (i < scaledWings) {
       if (i < (scaledWings - Right.stopPoint)) {
-        color = CRGB::Orange;
+        color = CRGB(255, 40, 0);
       } else {
         color = CRGB::White;
       }
@@ -1099,7 +1101,7 @@ void altitude(double fake, const CRGBPalette16& palette) {
     CRGB color = CRGB::Black;
     if (i < scaledFuse) {
       if (i < (scaledFuse - Fuse.stopPoint)) {
-        color = CRGB::Orange;
+        color = CRGB(255, 40, 0);
       } else {
         color = CRGB::White;
       }
