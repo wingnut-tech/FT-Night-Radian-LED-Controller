@@ -15,9 +15,13 @@
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
 
+//#define TESTMODE 0 // uncomment to override RC signal and force a specific show number for testing
+
 //#define TMP_BRIGHTNESS 55 // uncomment to override brightness for testing
 
-#define MAX_ALTIMETER 600
+// this is "double" the actual alt limit.
+// wings/fuse fill up to half this value, then "overflow" a red/orange color.
+#define MAX_ALTIMETER 800
 
 // define the pins that the buttons are connected to
 
@@ -467,6 +471,7 @@ void loop() {
     }
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
+    #ifndef TESTMODE // if TESTMODE isn't defined, read the RC signal
     if (rcInputPort == 0 || rcInputPort == 1) { // if rcInputPort == 0, check both rc input pins until we get a valid signal on one
       currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
       if (currentCh1 > 700 && currentCh1 < 2400) { // do we have a valid signal?
@@ -501,6 +506,10 @@ void loop() {
       statusFlash('r', 1, 300); // flash red to indicate no signal
     }
     currentShow = currentShow % numActiveShows; // keep currentShow within the limits of our active shows
+    #else // TESTMODE is defined, force specified show number
+    delayMicroseconds(20000); // pulseIn does cause a delay itself, so this helps keep things somewhat similar
+    currentShow = TESTMODE;
+    #endif
     
     // Are we entering program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
@@ -1078,34 +1087,36 @@ void altitude(double fake, const CRGBPalette16& palette) {
   
   if (fake != 0) {currentAlt = fake;}
 
-  //Rewrite of the altitude LED graph. Wings and Fuse all graphically indicate relative altitude AGL from zero to MAX_ALTIMETER
-  if (currentAlt > MAX_ALTIMETER) {currentAlt = MAX_ALTIMETER;}
-  
-  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint); i < Right.stopPoint; i++) {
-    Right.set(i, CRGB::Black);
-    Left.set(i, CRGB::Black);
-  }
-  for (int i=map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i < FUSE_LEDS; i++) {
-    Fuse.set(i, CRGB::Black);
-  }
-  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint); i++) {
-    if ((i % 2) == 0) {
-      Right.set(i, CRGB::White);
-      Left.set(i, CRGB::White);
-    } else {
-      Right.set(i, CRGB::Green);
-      Left.set(i, CRGB::Green);
+  // take currentAlt, clamp and scale it to strip size * 2, so we can "overflow" and indicate when over the altitude limit
+  uint8_t scaledWings = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Right.stopPoint * 2), 0, Right.stopPoint * 2);
+  uint8_t scaledFuse = constrain(map(currentAlt, 0, MAX_ALTIMETER, 0, Fuse.stopPoint * 2), 0, Fuse.stopPoint * 2);
+
+  for (uint8_t i = 0; i < Right.stopPoint; i++) {
+    CRGB color = CRGB::Black;
+    if (i < scaledWings) {
+      if (i < (scaledWings - Right.stopPoint)) {
+        color = CRGB(255, 40, 0);
+      } else {
+        color = CRGB::White;
+      }
     }
-  }
-  for (int i=0; i < map(currentAlt, 0, MAX_ALTIMETER, 0, FUSE_LEDS); i++) {
-    if ((i % 2) == 0) {
-      Fuse.set(i, CRGB::White);
-    } else {
-      Fuse.set(i, CRGB::Green);
-    }
+    Right.set(i, color);
+    Left.set(i, color);
   }
 
-  //map vertical speed value to gradient palette
+  for (uint8_t i = 0; i < Fuse.stopPoint; i++) {
+    CRGB color = CRGB::Black;
+    if (i < scaledFuse) {
+      if (i < (scaledFuse - Fuse.stopPoint)) {
+        color = CRGB(255, 40, 0);
+      } else {
+        color = CRGB::White;
+      }
+    }
+    Fuse.set(i, color);
+  }
+
+  // map vertical speed value to gradient palette
   int vspeedMap;
   avgVSpeed[0]=avgVSpeed[1];
   avgVSpeed[1]=avgVSpeed[2];
