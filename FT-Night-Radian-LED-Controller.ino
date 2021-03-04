@@ -15,6 +15,8 @@
 #define MIN_BRIGHTNESS 32
 #define MAX_BRIGHTNESS 255
 
+//#define TESTMODE 0 // uncomment to override RC signal and force a specific show number for testing
+
 //#define TMP_BRIGHTNESS 55 // uncomment to override brightness for testing
 
 // this is "double" the actual alt limit.
@@ -469,6 +471,7 @@ void loop() {
     }
 
   } else { // we are not in program mode. Read signal from receiver and run through programs normally.
+    #ifndef TESTMODE // if TESTMODE isn't defined, read the RC signal
     if (rcInputPort == 0 || rcInputPort == 1) { // if rcInputPort == 0, check both rc input pins until we get a valid signal on one
       currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
       if (currentCh1 > 700 && currentCh1 < 2400) { // do we have a valid signal?
@@ -503,6 +506,10 @@ void loop() {
       statusFlash('r', 1, 300); // flash red to indicate no signal
     }
     currentShow = currentShow % numActiveShows; // keep currentShow within the limits of our active shows
+    #else // TESTMODE is defined, force specified show number
+    delayMicroseconds(20000); // pulseIn does cause a delay itself, so this helps keep things somewhat similar
+    currentShow = TESTMODE;
+    #endif
     
     // Are we entering program mode?
     if (digitalRead(PROGRAM_CYCLE_BTN) == LOW) { // Is the Program button pressed?
