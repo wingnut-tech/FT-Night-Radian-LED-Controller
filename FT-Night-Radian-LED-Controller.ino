@@ -1,8 +1,8 @@
 //
 // ---- FT Night Radian LED Controller ----
 //
-// VERSION: 1.2.3
-// DATE:    2021-03-03
+// VERSION: 1.2.4
+// DATE:    2021-09-02
 //
 #define FASTLED_INTERNAL // disables the FastLED version message that looks like an error
 
