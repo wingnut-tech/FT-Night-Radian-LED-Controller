@@ -63,6 +63,8 @@ float basePressure; // gets initialized with ground level pressure on startup
 uint8_t rcInputPort = 0; // which RC input port is plugged in? 0 watches both 1 and 2, until either one gets a valid signal. then this gets set to that number
 int currentCh1 = 0;  // Receiver Channel PPM value
 int currentCh2 = 0;  // Receiver Channel PPM value
+int pwmLow = 1100;
+int pwmHigh = 1900;
 bool programMode = false; // are we in program mode?
 
 uint8_t currentShow = 0; // which LED show are we currently running
@@ -475,12 +477,18 @@ void loop() {
     if (rcInputPort == 0 || rcInputPort == 1) { // if rcInputPort == 0, check both rc input pins until we get a valid signal on one
       currentCh1 = pulseIn(RC_PIN1, HIGH, 25000);  // (Pin, State, Timeout)
       if (currentCh1 > 700 && currentCh1 < 2400) { // do we have a valid signal?
+        if (currentCh1 > pwmHigh) {
+          pwmHigh = currentCh1;
+        }
+        if (currentCh1 < pwmLow) {
+          pwmLow = currentCh1;
+        }
         if (rcInputPort == 0) {
           rcInputPort = 1; // if we were on "either" port mode, switch it to 1
           statusFlash('w', 1, 300); // flash white once for RC input 1
           statusFlash(hasBMP280, 1, 300); // indicate BMP280 module present
         }
-        currentShow = map(currentCh1, 950, 1960, 0, numActiveShows-1); // mapping 950us - 1960us  to 0 - (numActiveShows-1). might still need timing tweaks.
+        currentShow = map(currentCh1, pwmLow, pwmHigh+1, 0, numActiveShows); // map the input. this logic should cause slices to be equal, without going over numActiveShows
       }
     }
     if (rcInputPort == 0 || rcInputPort == 2) { // RC_PIN2 is our 2-position-switch autoscroll mode
