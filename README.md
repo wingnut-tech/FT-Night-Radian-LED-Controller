@@ -1,14 +1,9 @@
-# FT Night Radian LED Controller
+# This project has moved
 
-BMP280 library from <https://github.com/adafruit/Adafruit_BMP280_Library>\
-FastLED library from <https://github.com/FastLED/FastLED>
+The new repo is [here](https://github.com/wingnut-tech/LEDController).
 
-## Installation instructions
-- Install the latest version of the [Arduino IDE](https://www.arduino.cc/en/main/software)
-- Install the latest versions of the **Adafruit BMP280** and **FastLED** libraries using the Library Manager in the Arduino IDE
-- Download (or clone) this repository
-- Install the CH340G drivers
-- Unzip the file and then rename the new folder from FT-Night-Radian-LED-Controller-master to FT-Night-Radian-LED-Controller, removing -master from the end
-- Connect the FT Night Radian LED Controller to your computer with a USB cable
-- Make sure the board type is set to "Arduino Nano", the port is set to the correct serial port, and the processor is set to "ATmega328P (Old Bootloader)"
-- Upload the code to the Arduino!
+The project has been renamed from FT-Night-Radian-LED-Controller to simply LEDController. It's easier to type, and also represents the fact that the controller isn't exclusive to the FT Night Radian anymore.
+
+We've also done a complete revamp of the whole project structure. The single giant .ino file has been split out into proper .cpp and .h files for better organization.
+
+This existing repo will be left as-is and archived. While we could have just renamed the repo, the new project structure would break existing verions of the LEDControllerUpdater app.
